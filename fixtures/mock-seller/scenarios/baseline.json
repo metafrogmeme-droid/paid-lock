@@ -1,0 +1,33 @@
+{
+  "_label": "Written with AI help, test fixture. payTo values are fake test addresses, not real wallets. The asset is the Base Sepolia (testnet) USDC contract from the x402 v2 spec example (eip155:84532).",
+  "name": "baseline",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/v1/forecast",
+      "respond": {
+        "kind": "x402-v2",
+        "paymentRequired": {
+          "x402Version": 2,
+          "error": "payment required",
+          "resource": {
+            "url": "${origin}/v1/forecast",
+            "description": "Test fixture: forecast",
+            "mimeType": "application/json"
+          },
+          "accepts": [
+            {
+              "scheme": "exact",
+              "network": "eip155:84532",
+              "amount": "10000",
+              "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+              "payTo": "0x0000000000000000000000000000000000001001",
+              "maxTimeoutSeconds": 60,
+              "extra": { "name": "USDC", "version": "2" }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
