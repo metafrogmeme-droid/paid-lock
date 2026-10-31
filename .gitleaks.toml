@@ -1,0 +1,33 @@
+# Written with AI help. gitleaks rules for paid.lock (CLAUDE.md §5 rule 2).
+# paid.lock needs no secret at all, so any key-shaped value is a bug. Default rules stay on;
+# the rules below add key formats that sit next to payments: EVM private keys and wallet
+# mnemonics. Pattern idea ported from the -claw-guard-near- reference repo; rules written fresh.
+#   gitleaks git --config .gitleaks.toml .     (history; CI uses fetch-depth 0)
+# scripts/gitleaks-selftest.sh checks these rules against random values made at run time.
+
+title = "paid.lock gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "evm-private-key-assignment"
+description = "EVM private key (32 bytes hex) assigned to a key-like name (PRIVATE_KEY, privateKey, secretKey, pk, signer_key)"
+regex = '''(?i)(?:private[_-]?key|secret[_-]?key|signer[_-]?key|wallet[_-]?key|(?:^|[^a-z0-9])pk)[a-z0-9_-]{0,16}["']?\s*[:=]\s*["']?(?:0x)?([0-9a-f]{64})(?:[^0-9a-z]|$)'''
+secretGroup = 1
+keywords = ["key", "pk"]
+tags = ["key", "evm"]
+
+[[rules]]
+id = "wallet-mnemonic-assignment"
+description = "BIP-39 style mnemonic (12 to 24 lowercase words) assigned to a mnemonic / seed phrase name"
+regex = '''(?i)(?:mnemonic|seed[_ -]?phrase|recovery[_ -]?phrase)[a-z0-9_-]{0,16}["']?\s*[:=]\s*["']?((?:[a-z]{3,8}[ ]){11,23}[a-z]{3,8})'''
+secretGroup = 1
+keywords = ["mnemonic", "seed", "recovery"]
+tags = ["key", "wallet"]
+
+[[allowlists]]
+description = "Public 20-byte EVM addresses (payTo, asset contracts in fixtures) are not secrets"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^0x[0-9a-fA-F]{40}$''']

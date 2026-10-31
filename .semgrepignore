@@ -1,0 +1,6 @@
+# Written with AI help.
+.semgrep/
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml

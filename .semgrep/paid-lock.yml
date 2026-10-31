@@ -1,0 +1,49 @@
+# Written with AI help. Project Semgrep rules (CLAUDE.md §0, §5 rule 3). Run with the registry
+# packs in CI: semgrep scan --config .semgrep --config p/javascript --config p/typescript --error
+rules:
+  - id: paid-lock-no-redirect-follow
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: The probe never follows redirects (CLAUDE.md §3 item 4); use redirect "manual" and report them.
+    paths:
+      include: ["packages/**"]
+      exclude: ["**/*.test.ts"]
+    pattern-either:
+      - pattern: '{..., redirect: "follow", ...}'
+      - pattern: "{..., maxRedirections: $N, ...}"
+
+  - id: paid-lock-no-child-process-in-packages
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: Shipped packages must not spawn processes.
+    paths:
+      include: ["packages/**"]
+      exclude: ["**/*.test.ts"]
+    pattern-either:
+      - pattern: import $X from "node:child_process"
+      - pattern: import $X from "child_process"
+      - pattern: import { ... } from "node:child_process"
+      - pattern: import { ... } from "child_process"
+
+  - id: paid-lock-no-dynamic-code
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: No dynamic code execution.
+    paths:
+      exclude: ["**/node_modules/**"]
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: paid-lock-no-float-amounts
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: Amounts are bigint strings, never floats (CLAUDE.md §3 item 1).
+    paths:
+      include: ["packages/**"]
+      exclude: ["**/*.test.ts"]
+    pattern-either:
+      - pattern: parseFloat($AMOUNT.amount)
+      - pattern: Number($AMOUNT.amount)
+      - pattern: parseFloat($AMOUNT.maxAmountRequired)
+      - pattern: Number($AMOUNT.maxAmountRequired)
