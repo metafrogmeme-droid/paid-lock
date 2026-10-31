@@ -1,0 +1,189 @@
+# Written with AI help. CI for paid.lock (CLAUDE.md §0, §5, §6 M1).
+#
+# Local fixtures only: the mock seller on loopback. No live endpoint, no repository secret, no key.
+# The only token is the read-only GITHUB_TOKEN (`permissions: contents: read`); checkout does not
+# keep it (persist-credentials: false). zizmor gets it for its online audits (impostor commits).
+#
+# Pins: every action by full commit SHA (tag in the comment), each SHA checked against the Go
+# module proxy's record of the tag and raw.githubusercontent.com/<action>/<sha>/action.yml on
+# 31 Oct 2026. Tool binaries by version + SHA-256 of the release archive. Python tools by version.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+  ZIZMOR_VERSION: 1.31.1
+  SEMGREP_VERSION: 1.183.0
+
+jobs:
+  check:
+    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, audit, mock seller)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Set up pnpm (version from package.json "packageManager")
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Tests with coverage gate (core >= 95% lines and branches)
+        run: pnpm test:coverage
+
+      - name: copy-lint (three verdict strings, banned words, AI-help labels)
+        run: pnpm copy-lint
+
+      - name: Dependency allowlist (no wallet or signing library in probe, cli, core, protocols)
+        run: pnpm check:deps
+
+      - name: Never-pays source scan
+        run: pnpm check:never-pays
+
+      - name: Mock seller smoke test (402 + PAYMENT-REQUIRED on loopback, 0 payment headers)
+        run: pnpm smoke:mock-seller
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level low
+
+  test-matrix:
+    name: tests (node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24", "26"]
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node ${{ matrix.node }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Set up pnpm (version from package.json "packageManager")
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Tests
+        run: pnpm test
+
+  gitleaks:
+    name: gitleaks (full history + rules self-test)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks ${{ env.GITLEAKS_VERSION }} (SHA-256 checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/gitleaks.tgz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tgz" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
+
+      - name: gitleaks git (every commit)
+        run: gitleaks git --config .gitleaks.toml --redact --no-banner --verbose .
+
+      - name: gitleaks rules self-test
+        run: bash scripts/gitleaks-selftest.sh
+
+  workflows:
+    name: workflows (actionlint, zizmor)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint ${{ env.ACTIONLINT_VERSION }} (SHA-256 checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/actionlint.tgz" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/actionlint.tgz" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP/bin" actionlint
+          echo "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
+
+      - name: actionlint
+        run: actionlint -color
+
+      - name: zizmor ${{ env.ZIZMOR_VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m pip install --user --quiet "zizmor==${ZIZMOR_VERSION}"
+          python3 -m zizmor --min-severity low --format plain .github/workflows
+
+  semgrep:
+    name: semgrep (static security scan)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install semgrep ${{ env.SEMGREP_VERSION }}
+        run: python3 -m pip install --user --quiet "semgrep==${SEMGREP_VERSION}"
+
+      - name: Project rule tests
+        run: python3 -m semgrep --test --config .semgrep/paid-lock.yml .semgrep/paid-lock.ts
+
+      - name: semgrep scan (project rules + registry JS/TS packs)
+        run: |
+          python3 -m semgrep scan --metrics off --error \
+            --config .semgrep/paid-lock.yml --config p/javascript --config p/typescript .
