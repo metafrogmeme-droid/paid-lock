@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "allowImportingTsExtensions": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsconfig.tooling.tsbuildinfo",
+    "allowJs": true
+  },
+  "include": [
+    "packages/*/src",
+    "fixtures/*/src",
+    "fixtures/*/test",
+    "scripts",
+    "tests",
+    "*.config.ts",
+    "eslint.config.js"
+  ]
+}

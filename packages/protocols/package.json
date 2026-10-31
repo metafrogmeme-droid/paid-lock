@@ -1,0 +1,26 @@
+{
+  "name": "@paid-lock/protocols",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Read-only parsers for x402 v2, x402 v1 and MPP payment challenges.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "exports": {
+    ".": {
+      "@paid-lock/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/.tsbuildinfo"
+  ],
+  "dependencies": {
+    "@paid-lock/core": "workspace:*"
+  }
+}
