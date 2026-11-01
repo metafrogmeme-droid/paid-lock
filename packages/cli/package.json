@@ -27,5 +27,8 @@
   },
   "bin": {
     "paid-lock": "./dist/bin.js"
+  },
+  "devDependencies": {
+    "@paid-lock/mock-seller": "workspace:*"
   }
 }

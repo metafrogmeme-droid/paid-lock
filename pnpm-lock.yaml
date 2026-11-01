@@ -60,6 +60,10 @@ importers:
       '@paid-lock/protocols':
         specifier: workspace:*
         version: link:../protocols
+    devDependencies:
+      '@paid-lock/mock-seller':
+        specifier: workspace:*
+        version: link:../../fixtures/mock-seller
 
   packages/core:
     dependencies:

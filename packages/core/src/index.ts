@@ -39,6 +39,7 @@ export {
   summarize,
   verifyEndpoint,
   verifySamples,
+  verifyUnpinned,
   type AcceptResult,
   type EndpointResult,
   type Finding,
