@@ -33,3 +33,13 @@ export {
   type PaymentOption,
 } from "./terms.ts";
 export { VERDICTS, verdictLine, type Verdict } from "./verdict.ts";
+export {
+  acceptObservation,
+  summarize,
+  verifyEndpoint,
+  type AcceptResult,
+  type EndpointResult,
+  type Finding,
+  type Observation,
+  type Summary,
+} from "./verify.ts";
