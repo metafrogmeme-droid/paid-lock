@@ -23,5 +23,8 @@
   "dependencies": {
     "@paid-lock/core": "workspace:*",
     "@paid-lock/protocols": "workspace:*"
+  },
+  "devDependencies": {
+    "@paid-lock/mock-seller": "workspace:*"
   }
 }
