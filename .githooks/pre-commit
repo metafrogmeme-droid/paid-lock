@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Written with AI help. Pre-commit hook (CLAUDE.md §5 rule 2). Install: pnpm hooks:install
+# Fails closed: without gitleaks the commit stops (install gitleaks 8.30.1, see docs/DECISIONS.md).
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not found; install it (docs/DECISIONS.md D-007) before committing" >&2
+  exit 1
+fi
+gitleaks git --pre-commit --staged --config .gitleaks.toml --redact --no-banner
+node scripts/copy-lint.ts
+node scripts/check-never-pays.ts

@@ -1,0 +1,17 @@
+# Written with AI help.
+packages:
+  - packages/*
+  - fixtures/*
+
+# Supply chain: only install versions published at least 7 days ago (minutes).
+minimumReleaseAge: 10080
+# No dependency may run install scripts unless listed here.
+onlyBuiltDependencies:
+  - esbuild
+
+# Reviewed audit exceptions (docs/DECISIONS.md D-012). Each entry: dev-only, reason, re-check date.
+auditConfig:
+  ignoreGhsas:
+    # minimatch <11.0.1 (moderate, ReDoS on attacker-supplied glob patterns). Dev-only, reached
+    # through eslint, which pins ^10; our glob patterns are our own. Re-check by 15 Nov 2026.
+    - GHSA-g3hv-75wg-m249

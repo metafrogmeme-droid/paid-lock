@@ -1,0 +1,21 @@
+{
+  "name": "@paid-lock/mock-seller",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local-only mock x402 seller for tests and the demo. Never settles, has no facilitator. Test fixture.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "exports": {
+    ".": {
+      "@paid-lock/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  }
+}

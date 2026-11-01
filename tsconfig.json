@@ -1,0 +1,20 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/protocols"
+    },
+    {
+      "path": "packages/probe"
+    },
+    {
+      "path": "packages/cli"
+    },
+    {
+      "path": "fixtures/mock-seller"
+    }
+  ]
+}

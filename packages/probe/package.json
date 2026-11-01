@@ -1,0 +1,27 @@
+{
+  "name": "@paid-lock/probe",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Unpaid HTTP probe for paid endpoints. Never sends a payment header and never loads a key.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "exports": {
+    ".": {
+      "@paid-lock/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/.tsbuildinfo"
+  ],
+  "dependencies": {
+    "@paid-lock/core": "workspace:*",
+    "@paid-lock/protocols": "workspace:*"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "paid-lock",
+  "version": "0.0.0",
+  "private": true,
+  "description": "paid-lock CLI: pin the paid endpoints your agent calls in a reviewed lockfile.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "exports": {
+    ".": {
+      "@paid-lock/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/.tsbuildinfo"
+  ],
+  "dependencies": {
+    "@paid-lock/core": "workspace:*",
+    "@paid-lock/probe": "workspace:*",
+    "@paid-lock/protocols": "workspace:*"
+  },
+  "bin": {
+    "paid-lock": "./dist/bin.js"
+  }
+}
