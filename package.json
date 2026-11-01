@@ -23,7 +23,8 @@
     "mock-seller": "node fixtures/mock-seller/src/main.ts",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm copy-lint && pnpm check:deps && pnpm check:never-pays && pnpm smoke:mock-seller",
     "smoke:mock-seller": "node scripts/smoke-mock-seller.ts",
-    "gen:schema": "node scripts/gen-lock-schema.ts"
+    "gen:schema": "node scripts/gen-lock-schema.ts",
+    "demo": "pnpm build && node scripts/demo.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
