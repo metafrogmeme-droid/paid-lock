@@ -12,6 +12,7 @@ import { MAX_DEPTH, prettyCanonical } from "./jcs.ts";
 import type { Json, JsonObject } from "./json.ts";
 import { TIGHTENABLE } from "./reasons.ts";
 import { optionId, optionIntegrity, PAYMENT_FLOWS, type ObservedTerms, type PaymentOption } from "./terms.ts";
+import { normalizeUrl } from "./url.ts";
 
 export const LOCKFILE_VERSION = 1;
 /** paid.lock files above this size are refused before parsing. */
@@ -65,6 +66,8 @@ export const LockSchema = z
       };
       const m = /^(GET|POST) (\S+)$/.exec(key);
       if (m?.[2] === undefined || normalUrl(m[2]) !== m[2]) issue('key must be "GET|POST <normalised absolute URL>"');
+      if (normalUrl(ep.observed.resourceUrl) !== ep.observed.resourceUrl)
+        issue("resource URL must be normalised", "observed", "resourceUrl");
       for (const [id, o] of Object.entries(ep.observed.options)) {
         const opt = o as unknown as PaymentOption & { integrity: string };
         if (optionId(opt) !== id) issue("key must equal the option identity", "observed", "options", id);
@@ -93,15 +96,15 @@ export type LockedEndpoint = Lock["endpoints"][string];
 export type LockedObserved = LockedEndpoint["observed"];
 
 function normalUrl(url: string): string | undefined {
-  try {
-    return new URL(url).href;
-  } catch {
-    return undefined;
-  }
+  const r = normalizeUrl(url);
+  return r.ok ? r.value : undefined;
 }
 
+/** `"<METHOD> <URL>"` with the URL normalised by normalizeUrl (owner decision #10). Throws on a bad URL. */
 export function endpointKey(method: Method, url: string): string {
-  return `${method} ${new URL(url).href}`;
+  const r = normalizeUrl(url);
+  if (!r.ok) throw new RangeError(r.reason);
+  return `${method} ${r.value}`;
 }
 
 export function emptyLock(): Lock {

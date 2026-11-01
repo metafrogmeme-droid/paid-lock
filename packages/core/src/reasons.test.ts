@@ -21,10 +21,11 @@ const NEEDS_OK: ReasonCode[] = [
   "ENDPOINT_NOT_402",
   "PROBE_TIMEOUT",
   "PROTOCOL_VERSION_CHANGED",
+  "OPTION_REMOVED",
 ];
 
 describe("reason codes", () => {
-  it("has exactly the codes of CLAUDE.md §3 item 2 plus PROTOCOL_VERSION_CHANGED (P-01)", () => {
+  it("has exactly the codes of CLAUDE.md §3 item 2 plus PROTOCOL_VERSION_CHANGED (P-01) and OPTION_REMOVED (#11)", () => {
     expect(Object.keys(REASONS).sort()).toEqual(["OK", ...BLOCKED, ...NEEDS_OK].sort());
   });
 

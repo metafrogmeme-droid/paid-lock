@@ -31,6 +31,8 @@ export interface EndpointResult {
   verdict: Verdict;
   line: string;
   findings: Finding[];
+  /** Information that changes no verdict, e.g. a price drop (owner decision #2: allowed but reported). */
+  notes: string[];
 }
 
 const RANK: Record<Verdict, number> = { allowed: 0, needsOk: 1, blocked: 2 };
@@ -55,6 +57,7 @@ function change(before: string, after: string): string {
 
 class Collector {
   readonly findings: Finding[] = [];
+  readonly notes: string[] = [];
   private readonly tighten: readonly string[];
   constructor(tighten: readonly string[]) {
     this.tighten = tighten;
@@ -72,7 +75,13 @@ class Collector {
   result(key: string): EndpointResult {
     const worst = this.findings.reduce<Verdict>((v, f) => (RANK[f.verdict] > RANK[v] ? f.verdict : v), "allowed");
     const first = this.findings.find((f) => f.verdict === worst);
-    return { key, verdict: worst, line: first?.line ?? verdictLine("allowed"), findings: this.findings };
+    return {
+      key,
+      verdict: worst,
+      line: first?.line ?? verdictLine("allowed"),
+      findings: this.findings,
+      notes: this.notes,
+    };
   }
 }
 
@@ -82,6 +91,8 @@ function sharedIdentity(a: PaymentOption, b: PaymentOption): number {
 
 function compareOptions(c: Collector, locked: PaymentOption, seen: PaymentOption, maxAmount: string, id: string): void {
   if (BigInt(seen.amount) > BigInt(maxAmount)) c.add("PRICE_ABOVE_LOCK", `(${clip(seen.amount)} > ${maxAmount})`, id);
+  else if (BigInt(seen.amount) < BigInt(locked.amount))
+    c.notes.push(`price dropped for ${id} ${change(locked.amount, seen.amount)}`);
   if (seen.paymentFlow !== locked.paymentFlow)
     c.add("PAYMENT_FLOW_CHANGED", change(locked.paymentFlow, seen.paymentFlow), id);
   const changed = OTHER_FIELDS.filter((f) => canonicalize(locked[f] as Json) !== canonicalize(seen[f] as Json));
@@ -153,9 +164,36 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
     }
     for (const f of IDENTITY) if (was[f] !== seen[f]) c.add(IDENTITY_CODE[f], change(was[f], seen[f]), optionId(was));
   }
-  for (const was of unmatchedLocked) {
-    c.add("TERMS_CHANGED_OTHER", `(option no longer offered: ${clip(optionId(was))})`, optionId(was));
+  for (const was of unmatchedLocked) c.add("OPTION_REMOVED", `(${clip(optionId(was))})`, optionId(was));
+  return c.result(key);
+}
+
+/**
+ * Verify two (or more) identical unpaid requests (CLAUDE.md §3 item 4). Every sample is verified and
+ * all findings kept (deduplicated); if the samples' normalised terms differ, that alone needs your OK.
+ */
+export function verifySamples(lock: Lock, key: string, samples: readonly Observation[]): EndpointResult {
+  const [first, ...rest] = samples;
+  if (first === undefined) throw new RangeError("verifySamples needs at least one sample");
+  const results = samples.map((s) => verifyEndpoint(lock, key, s));
+  const c = new Collector(lock.endpoints[key]?.policy.tighten ?? []);
+  const seen = new Set<string>();
+  for (const r of results) {
+    for (const f of r.findings) {
+      if (!seen.has(f.line)) {
+        seen.add(f.line);
+        c.findings.push(f);
+      }
+    }
+    for (const n of r.notes) if (!c.notes.includes(n)) c.notes.push(n);
   }
+  const fingerprint = (o: Observation): string => {
+    if (o.kind !== "terms") return o.kind;
+    const n = normalizeTerms(o.terms);
+    return n.ok ? canonicalize(n.terms as unknown as Json) : "unreadable";
+  };
+  if (rest.some((s) => fingerprint(s) !== fingerprint(first)))
+    c.add("TERMS_CHANGED_OTHER", "(terms differ between two identical requests)");
   return c.result(key);
 }
 

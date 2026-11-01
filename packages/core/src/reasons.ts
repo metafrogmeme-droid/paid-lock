@@ -1,5 +1,6 @@
 // Written with AI help.
-// Stable reason codes (CLAUDE.md §3 item 2; PROTOCOL_VERSION_CHANGED added by approved P-01).
+// Stable reason codes (CLAUDE.md §3 item 2; PROTOCOL_VERSION_CHANGED added by approved P-01,
+// OPTION_REMOVED by owner decision #11 on 1 Nov 2026).
 // Every code maps to exactly one of the three verdicts; unknown codes fail closed to blocked.
 import { verdictLine, type Verdict } from "./verdict.ts";
 
@@ -19,6 +20,7 @@ export const REASONS = {
   ENDPOINT_NOT_402: { verdict: "needsOk", detail: "endpoint did not answer 402 without payment" },
   PROBE_TIMEOUT: { verdict: "needsOk", detail: "endpoint did not answer in time" },
   PROTOCOL_VERSION_CHANGED: { verdict: "needsOk", detail: "protocol version changed since paid.lock" },
+  OPTION_REMOVED: { verdict: "needsOk", detail: "a payment option in paid.lock is no longer offered" },
 } as const satisfies Record<string, { verdict: Verdict; detail: string }>;
 
 export type ReasonCode = keyof typeof REASONS;

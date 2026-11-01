@@ -167,7 +167,8 @@
                     "NEW_OPTION_OFFERED",
                     "ENDPOINT_NOT_402",
                     "PROBE_TIMEOUT",
-                    "PROTOCOL_VERSION_CHANGED"
+                    "PROTOCOL_VERSION_CHANGED",
+                    "OPTION_REMOVED"
                   ]
                 }
               }

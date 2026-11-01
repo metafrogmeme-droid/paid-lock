@@ -27,8 +27,15 @@ function lockWith(t: ObservedTerms = terms(), toleranceBps = 0): Lock {
 
 describe("endpointKey", () => {
   it("is the method and the normalised URL", () => {
-    expect(endpointKey("GET", "HTTPS://API.example.com/v1/forecast")).toBe("GET https://api.example.com/v1/forecast");
+    expect(endpointKey("GET", "HTTPS://Shop.Example.com:443/v1/forecast")).toBe(
+      "GET https://shop.example.com/v1/forecast",
+    );
     expect(endpointKey("POST", "https://a.example/x?q=1")).toBe("POST https://a.example/x?q=1");
+    expect(endpointKey("GET", "https://a.example")).toBe("GET https://a.example");
+  });
+
+  it("throws on a URL that cannot be normalised", () => {
+    expect(() => endpointKey("GET", "https://a.example/a b")).toThrow(/whitespace/);
   });
 });
 
@@ -104,7 +111,8 @@ describe("serializeLock / parseLock", () => {
     ],
     ["tightening a blocked code", (_l, e) => (e.policy.tighten = ["PAYTO_CHANGED"])],
     ["tightening a code twice", (_l, e) => (e.policy.tighten = ["PROBE_TIMEOUT", "PROBE_TIMEOUT"])],
-    ["a non-normalised endpoint URL", (l, e) => (l.endpoints = { "GET HTTPS://API.example.com/v1/forecast": e })],
+    ["a non-normalised endpoint URL", (l, e) => (l.endpoints = { "GET HTTPS://Shop.Example.com/v1/forecast": e })],
+    ["a non-normalised resource URL", (_l, e) => (e.observed.resourceUrl = "https://shop.example.com:443/v1/forecast")],
     ["an endpoint key with another method", (l, e) => (l.endpoints = { "PUT https://api.example.com/v1/forecast": e })],
   ])("rejects %s", (_name, f) => {
     const r = parseLock(mutate(f));
