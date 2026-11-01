@@ -7,8 +7,19 @@ pins, per endpoint, the `payTo`, network (CAIP-2), asset, scheme, maximum amount
 The `paid-lock` CLI reads each endpoint's 402 terms **without paying** and a GitHub Action fails CI when a seller
 changes where the money goes or raises the price above your lock.
 
-> **Status: M1 scaffold.** Nothing user-facing works yet. The CLI prints help; commands arrive in M3, the Action in
-> M4. Nothing is published to npm or the Marketplace.
+> **Status: M3 in progress.** Nothing is published to npm or the Marketplace yet; run it from this repo.
+
+## Quick start (from this repo)
+
+```sh
+pnpm install && pnpm build
+node packages/cli/dist/bin.js init
+node packages/cli/dist/bin.js add https://seller.example/v1/forecast   # probes unpaid, pins the terms
+git diff paid.lock                                                      # review what you pinned
+node packages/cli/dist/bin.js verify                                    # 0 allowed, 1 blocked, 2 needs your OK
+```
+
+Commands, exit codes and reason codes: [docs/SPEC.md](docs/SPEC.md).
 
 paid-lock never pays, never signs and never loads a key.
 

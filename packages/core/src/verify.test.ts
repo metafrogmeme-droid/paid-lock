@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
 import { emptyLock, endpointKey, newEndpoint, type Lock } from "./lock.ts";
 import { normalizeTerms, optionId, type ObservedTerms, type PaymentOption } from "./terms.ts";
-import { acceptObservation, summarize, verifyEndpoint, verifySamples, type Observation } from "./verify.ts";
+import {
+  acceptObservation,
+  summarize,
+  verifyEndpoint,
+  verifySamples,
+  verifyUnpinned,
+  type Observation,
+} from "./verify.ts";
 
 const URL = "https://api.example.com/v1/forecast";
 const KEY = endpointKey("GET", URL);
@@ -335,9 +342,9 @@ describe("verifySamples (two identical unpaid requests)", () => {
   it("samples that differ need your OK, and every sample's findings are kept", () => {
     const r = verifySamples(lockOf(), KEY, [live(terms()), withOption({ payTo: PAY_B })]);
     expect(r.findings.map((f) => f.code).sort()).toEqual(["PAYTO_CHANGED", "TERMS_CHANGED_OTHER"]);
-    expect(r.findings.find((f) => f.code === "TERMS_CHANGED_OTHER")?.line).toContain(
-      "differ between two identical requests",
-    );
+    const unstable = r.findings.find((f) => f.code === "TERMS_CHANGED_OTHER");
+    expect(unstable?.line).toContain("differ between two identical requests");
+    expect(unstable?.tag).toBe("unstable-samples");
     expect(r.verdict).toBe("blocked");
   });
 
@@ -362,5 +369,30 @@ describe("verifySamples (two identical unpaid requests)", () => {
 
   it("needs at least one sample", () => {
     expect(() => verifySamples(lockOf(), KEY, [])).toThrow(RangeError);
+  });
+});
+
+describe("verifyUnpinned (what paid-lock add checks)", () => {
+  it("allows two identical readable samples", () => {
+    expect(verifyUnpinned(KEY, [live(terms()), live(terms())]).verdict).toBe("allowed");
+  });
+
+  it.each<[string, Observation, string]>([
+    ["unreadable", { kind: "unreadable", reason: "x" }, "REQUIREMENTS_UNREADABLE"],
+    ["not 402", { kind: "not402", status: 200 }, "ENDPOINT_NOT_402"],
+    ["timeout", { kind: "timeout" }, "PROBE_TIMEOUT"],
+    ["terms that fail normalisation", live(terms({ options: [] })), "REQUIREMENTS_UNREADABLE"],
+  ])("reports %s", (_name, obs, code) => {
+    expect(verifyUnpinned(KEY, [obs, obs]).findings.map((f) => f.code)).toEqual([code]);
+  });
+
+  it("needs your OK when the samples differ", () => {
+    const r = verifyUnpinned(KEY, [live(terms()), withOption({ payTo: PAY_B })]);
+    expect(r.findings.map((f) => f.tag)).toEqual(["unstable-samples"]);
+    expect(r.verdict).toBe("needsOk");
+  });
+
+  it("needs at least one sample", () => {
+    expect(() => verifyUnpinned(KEY, [])).toThrow(RangeError);
   });
 });

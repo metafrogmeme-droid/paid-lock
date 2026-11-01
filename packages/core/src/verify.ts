@@ -25,6 +25,8 @@ export interface Finding {
   /** One of the three verdict strings, single line. */
   line: string;
   option?: string;
+  /** Set on the finding that reports two identical requests seeing different terms. */
+  tag?: "unstable-samples";
 }
 
 export interface EndpointResult {
@@ -64,12 +66,13 @@ class Collector {
     this.tighten = tighten;
   }
 
-  add(code: ReasonCode, extra?: string, option?: string): void {
+  add(code: ReasonCode, extra?: string, option?: string, tag?: Finding["tag"]): void {
     const base = REASONS[code];
     const verdict: Verdict = base.verdict === "needsOk" && this.tighten.includes(code) ? "blocked" : base.verdict;
     const detail = extra === undefined ? base.detail : `${base.detail} ${extra}`;
     const finding: Finding = { code, verdict, line: verdictLine(verdict, detail) };
     if (option !== undefined) finding.option = option;
+    if (tag !== undefined) finding.tag = tag;
     this.findings.push(finding);
   }
 
@@ -107,30 +110,8 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
     c.add("NOT_IN_LOCK");
     return c.result(key);
   }
-  switch (obs.kind) {
-    case "unreadable":
-      c.add("REQUIREMENTS_UNREADABLE", `(${clip(obs.reason)})`);
-      return c.result(key);
-    case "not402":
-      c.add(
-        "ENDPOINT_NOT_402",
-        obs.status === 0
-          ? `(no HTTP response${obs.detail === undefined ? "" : `: ${clip(obs.detail)}`})`
-          : `(HTTP ${String(obs.status)}${obs.detail === undefined ? "" : `, ${clip(obs.detail)}`})`,
-      );
-      return c.result(key);
-    case "timeout":
-      c.add("PROBE_TIMEOUT");
-      return c.result(key);
-    case "terms":
-      break;
-  }
-  const n = normalizeTerms(obs.terms);
-  if (!n.ok) {
-    c.add("REQUIREMENTS_UNREADABLE", `(${n.reason})`);
-    return c.result(key);
-  }
-  const t = n.terms;
+  const t = readableTerms(c, obs);
+  if (t === undefined) return c.result(key);
   const locked = ep.observed;
   // Both sides are "x402" until MPP lands (M5); then a protocol change is reported here too.
   if (t.x402Version !== locked.x402Version) {
@@ -179,8 +160,7 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
  * all findings kept (deduplicated); if the samples' normalised terms differ, that alone needs your OK.
  */
 export function verifySamples(lock: Lock, key: string, samples: readonly Observation[]): EndpointResult {
-  const [first, ...rest] = samples;
-  if (first === undefined) throw new RangeError("verifySamples needs at least one sample");
+  if (samples.length === 0) throw new RangeError("verifySamples needs at least one sample");
   const results = samples.map((s) => verifyEndpoint(lock, key, s));
   const c = new Collector(lock.endpoints[key]?.policy.tighten ?? []);
   const seen = new Set<string>();
@@ -193,13 +173,69 @@ export function verifySamples(lock: Lock, key: string, samples: readonly Observa
     }
     for (const n of r.notes) if (!c.notes.includes(n)) c.notes.push(n);
   }
+  if (samplesDiffer(samples)) {
+    c.add("TERMS_CHANGED_OTHER", "(terms differ between two identical requests)", undefined, "unstable-samples");
+  }
+  return c.result(key);
+}
+
+/** Normalised terms, or undefined after adding the finding that explains why there are none. */
+function readableTerms(c: Collector, obs: Observation): ObservedTerms | undefined {
+  switch (obs.kind) {
+    case "unreadable":
+      c.add("REQUIREMENTS_UNREADABLE", `(${clip(obs.reason)})`);
+      return undefined;
+    case "not402":
+      c.add(
+        "ENDPOINT_NOT_402",
+        obs.status === 0
+          ? `(no HTTP response${obs.detail === undefined ? "" : `: ${clip(obs.detail)}`})`
+          : `(HTTP ${String(obs.status)}${obs.detail === undefined ? "" : `, ${clip(obs.detail)}`})`,
+      );
+      return undefined;
+    case "timeout":
+      c.add("PROBE_TIMEOUT");
+      return undefined;
+    case "terms": {
+      const n = normalizeTerms(obs.terms);
+      if (n.ok) return n.terms;
+      c.add("REQUIREMENTS_UNREADABLE", `(${n.reason})`);
+      return undefined;
+    }
+  }
+}
+
+function samplesDiffer(samples: readonly Observation[]): boolean {
   const fingerprint = (o: Observation): string => {
     if (o.kind !== "terms") return o.kind;
     const n = normalizeTerms(o.terms);
     return n.ok ? canonicalize(n.terms as unknown as Json) : "unreadable";
   };
-  if (rest.some((s) => fingerprint(s) !== fingerprint(first)))
-    c.add("TERMS_CHANGED_OTHER", "(terms differ between two identical requests)");
+  const [first, ...rest] = samples.map(fingerprint);
+  return rest.some((f) => f !== first);
+}
+
+/**
+ * What `paid-lock add` checks before pinning a new endpoint: every sample must be readable terms and
+ * all samples must agree. Allowed means the first sample can be pinned.
+ */
+export function verifyUnpinned(key: string, samples: readonly Observation[]): EndpointResult {
+  if (samples.length === 0) throw new RangeError("verifyUnpinned needs at least one sample");
+  const c = new Collector([]);
+  const seen = new Set<string>();
+  for (const s of samples) {
+    const probeOnly = new Collector([]);
+    readableTerms(probeOnly, s);
+    for (const f of probeOnly.findings) {
+      if (!seen.has(f.line)) {
+        seen.add(f.line);
+        c.findings.push(f);
+      }
+    }
+  }
+  if (samplesDiffer(samples)) {
+    c.add("TERMS_CHANGED_OTHER", "(terms differ between two identical requests)", undefined, "unstable-samples");
+  }
   return c.result(key);
 }
 
