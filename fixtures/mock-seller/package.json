@@ -17,5 +17,9 @@
   },
   "dependencies": {
     "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@paid-lock/core": "workspace:*",
+    "@paid-lock/protocols": "workspace:*"
   }
 }

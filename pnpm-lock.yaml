@@ -41,6 +41,13 @@ importers:
       zod:
         specifier: ^4.1.0
         version: 4.6.7
+    devDependencies:
+      '@paid-lock/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@paid-lock/protocols':
+        specifier: workspace:*
+        version: link:../../packages/protocols
 
   packages/cli:
     dependencies:
@@ -77,6 +84,9 @@ importers:
       '@paid-lock/core':
         specifier: workspace:*
         version: link:../core
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
 packages:
 

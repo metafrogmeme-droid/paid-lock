@@ -2,7 +2,8 @@
 import { networkInterfaces } from "node:os";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { z } from "zod";
+import { normalizeTerms } from "@paid-lock/core";
+import { observe402 } from "@paid-lock/protocols";
 import { loadScenario, parseScenario, startMockSeller, type MockSeller } from "../src/index.ts";
 
 /** Some containers have no IPv6 loopback; GitHub-hosted runners do. */
@@ -11,27 +12,6 @@ const HAS_IPV6_LOOPBACK = Object.values(networkInterfaces()).some((list) =>
 );
 
 const BASELINE = fileURLToPath(new URL("../scenarios/baseline.json", import.meta.url));
-
-/**
- * Shape check of the served object against x402 v2 field names (specs/x402-specification-v2.md §5.1.2).
- * Only for this fixture test; the real, fail-closed parser arrives in packages/protocols (M2).
- */
-const PaymentRequirements = z.object({
-  scheme: z.string(),
-  network: z.string().regex(/^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}$/),
-  amount: z.string().regex(/^\d+$/),
-  asset: z.string(),
-  payTo: z.string(),
-  maxTimeoutSeconds: z.number().int().positive(),
-  extra: z.record(z.string(), z.unknown()).optional(),
-});
-const PaymentRequired = z.object({
-  x402Version: z.literal(2),
-  error: z.string().optional(),
-  resource: z.object({ url: z.url() }),
-  accepts: z.array(PaymentRequirements).min(1),
-  extensions: z.record(z.string(), z.unknown()).optional(),
-});
 
 let seller: MockSeller | undefined;
 afterEach(async () => {
@@ -50,11 +30,16 @@ describe("mock seller", () => {
     expect(s.origin).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     const res = await fetch(`${s.origin}/v1/forecast`);
     expect(res.status).toBe(402);
-    const header = res.headers.get("payment-required");
-    expect(header).toMatch(/^[A-Za-z0-9+/]+={0,2}$/);
-    const decoded = PaymentRequired.parse(JSON.parse(Buffer.from(header ?? "", "base64").toString("utf8")));
-    expect(decoded.resource.url).toBe(`${s.origin}/v1/forecast`);
-    expect(decoded.accepts[0]?.network).toBe("eip155:84532");
+    const obs = observe402({
+      status: res.status,
+      headers: { "payment-required": res.headers.get("payment-required") ?? undefined },
+      body: await res.text(),
+    });
+    if (obs.kind !== "terms") throw new Error(`expected readable terms, got ${obs.kind}`);
+    const n = normalizeTerms(obs.terms);
+    expect(n.ok).toBe(true);
+    expect(obs.terms.resourceUrl).toBe(`${s.origin}/v1/forecast`);
+    expect(obs.terms.options[0]?.network).toBe("eip155:84532");
     expect(s.stats()).toEqual({ requests: 1, paymentHeadersSeen: 0, challengesServed: 1 });
   });
 
