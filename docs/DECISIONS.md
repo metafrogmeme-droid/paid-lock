@@ -67,3 +67,14 @@ zod-checked and must carry the AI-help label.
 that the allowlist cannot override (`scripts/lib/deps.ts`); (b) source scan of shipped code for payment
 header names, facilitator paths and signing calls (`scripts/lib/never-pays.ts`, also run on the action bundle
 from M4); (c) mock seller counter. Each layer has a planted-violation test.
+
+**D-016 Hashing in the pure core with `@noble/hashes`.** SHA-256 (integrity strings) and Keccak-256 (EIP-55
+checksums) come from `@noble/hashes` 2.x: pure JS, audited, zero dependencies, synchronous, and it runs in
+Node, browsers and edge runtimes, which the runtime library (M5) needs. Alternatives: `node:crypto` (ties the core
+to Node and is an I/O-module import the core lint forbids), WebCrypto (async, no Keccak). The dependency
+allowlist names it explicitly; the wallet denylist still blocks `@noble/curves` and `@noble/secp256k1`.
+
+**D-017 Canonical JSON is RFC 8785, written in-house.** About 40 lines: ECMAScript number and string
+serialisation (what RFC 8785 is defined by), keys sorted by UTF-16 code units, I-JSON enforced
+(`String.prototype.isWellFormed`, finite numbers, plain objects), depth ≤ 64 containers. Tested against the
+RFC's own examples plus property tests. A dependency would add supply-chain surface for little code.

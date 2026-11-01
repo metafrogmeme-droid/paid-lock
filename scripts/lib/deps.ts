@@ -7,7 +7,13 @@
 export const GUARDED = ["@paid-lock/core", "@paid-lock/protocols", "@paid-lock/probe", "paid-lock"] as const;
 
 /** Allowed production dependencies of guarded packages (exact names). Grows only by reviewed PR. */
-export const ALLOWED = new Set<string>(["@paid-lock/core", "@paid-lock/protocols", "@paid-lock/probe"]);
+export const ALLOWED = new Set<string>([
+  "@paid-lock/core",
+  "@paid-lock/protocols",
+  "@paid-lock/probe",
+  // SHA-256 and Keccak-256 for integrity strings and EIP-55: pure JS, audited, no dependencies (D-016).
+  "@noble/hashes",
+]);
 
 /** Wallet, key, signing and payment-client libraries. Never allowed, whatever the allowlist says. */
 export const WALLET_LIKE =

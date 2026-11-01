@@ -6,7 +6,7 @@ rules:
     severity: ERROR
     message: The probe never follows redirects (CLAUDE.md §3 item 4); use redirect "manual" and report them.
     paths:
-      include: ["packages/**"]
+      include: ["/packages/**"]
       exclude: ["**/*.test.ts"]
     pattern-either:
       - pattern: '{..., redirect: "follow", ...}'
@@ -17,7 +17,7 @@ rules:
     severity: ERROR
     message: Shipped packages must not spawn processes.
     paths:
-      include: ["packages/**"]
+      include: ["/packages/**"]
       exclude: ["**/*.test.ts"]
     pattern-either:
       - pattern: import $X from "node:child_process"
@@ -40,7 +40,7 @@ rules:
     severity: ERROR
     message: Amounts are bigint strings, never floats (CLAUDE.md §3 item 1).
     paths:
-      include: ["packages/**"]
+      include: ["/packages/**"]
       exclude: ["**/*.test.ts"]
     pattern-either:
       - pattern: parseFloat($AMOUNT.amount)
