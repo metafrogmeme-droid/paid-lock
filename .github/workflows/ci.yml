@@ -37,7 +37,7 @@ env:
 
 jobs:
   check:
-    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, audit, mock seller)
+    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, audit, mock seller, demo)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -80,6 +80,9 @@ jobs:
 
       - name: Mock seller smoke test (402 + PAYMENT-REQUIRED on loopback, 0 payment headers)
         run: pnpm smoke:mock-seller
+
+      - name: Demo (paid-lock add/verify against the mock seller; DEMO OK line, 0 payments sent)
+        run: pnpm demo
 
       - name: Dependency audit
         run: pnpm audit --audit-level low
