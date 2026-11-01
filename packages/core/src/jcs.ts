@@ -56,3 +56,23 @@ function serialise(value: unknown, depth: number): string {
 export function canonicalize(value: Json): string {
   return serialise(value, 1);
 }
+
+/**
+ * The same canonical form, indented by two spaces with one trailing newline: the on-disk lockfile
+ * layout. Deterministic (same value, same bytes) and reviewable as a line diff.
+ */
+export function prettyCanonical(value: Json): string {
+  return `${pretty(value, "")}\n`;
+}
+
+function pretty(value: Json, indent: string): string {
+  if (value === null || typeof value !== "object") return canonicalize(value);
+  const inner = `${indent}  `;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    return `[\n${value.map((v) => inner + pretty(v, inner)).join(",\n")}\n${indent}]`;
+  }
+  const entries = Object.entries(value).sort(([a], [b]) => compareUtf16(a, b));
+  if (entries.length === 0) return "{}";
+  return `{\n${entries.map(([k, v]) => `${inner}${serialiseString(k)}: ${pretty(v, inner)}`).join(",\n")}\n${indent}}`;
+}
