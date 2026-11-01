@@ -40,7 +40,8 @@ describe("mock seller", () => {
     expect(n.ok).toBe(true);
     expect(obs.terms.resourceUrl).toBe(`${s.origin}/v1/forecast`);
     expect(obs.terms.options[0]?.network).toBe("eip155:84532");
-    expect(s.stats()).toEqual({ requests: 1, paymentHeadersSeen: 0, challengesServed: 1 });
+    expect(s.stats()).toMatchObject({ requests: 1, paymentHeadersSeen: 0, challengesServed: 1 });
+    expect(s.stats().requestHeaderNames).toContain("host");
   });
 
   it("answers 404 for an unknown route and for the wrong method", async () => {
@@ -71,7 +72,7 @@ describe("mock seller", () => {
     const s = await start();
     await fetch(`${s.origin}/v1/forecast`);
     const stats: unknown = await (await fetch(`${s.origin}/__mock/stats`)).json();
-    expect(stats).toEqual({ requests: 2, paymentHeadersSeen: 0, challengesServed: 1 });
+    expect(stats).toMatchObject({ requests: 2, paymentHeadersSeen: 0, challengesServed: 1 });
   });
 
   it.runIf(HAS_IPV6_LOOPBACK)("binds to IPv6 loopback too", async () => {
@@ -89,5 +90,39 @@ describe("mock seller", () => {
   it("rejects a scenario without the AI-help label or with unknown keys", () => {
     expect(() => parseScenario({ name: "x", routes: [] })).toThrow();
     expect(() => parseScenario({ _label: "Written with AI help", name: "x", routes: [], extra: true })).toThrow();
+  });
+
+  it("serves x402 v1 bodies, raw answers and delays, and can switch scenarios", async () => {
+    const s = await start();
+    s.use(
+      parseScenario({
+        _label: "Written with AI help, test fixture.",
+        name: "kinds",
+        routes: [
+          { method: "GET", path: "/v1", respond: { kind: "x402-v1", body: { x402Version: 1, url: "${origin}/v1" } } },
+          { method: "GET", path: "/free", respond: { kind: "raw", status: 200, body: "free" } },
+          {
+            method: "GET",
+            path: "/moved",
+            respond: { kind: "raw", status: 302, headers: { location: "https://other.example/x" } },
+          },
+          { method: "GET", path: "/big", respond: { kind: "raw", status: 402, bodyBytes: 2048 } },
+          { method: "GET", path: "/slow", delayMs: 50, respond: { kind: "raw", status: 200 } },
+        ],
+      }),
+    );
+    const v1 = await fetch(`${s.origin}/v1`);
+    expect(v1.status).toBe(402);
+    expect(await v1.json()).toEqual({ x402Version: 1, url: `${s.origin}/v1` });
+    expect(await (await fetch(`${s.origin}/free`)).text()).toBe("free");
+    const moved = await fetch(`${s.origin}/moved`, { redirect: "manual" });
+    expect(moved.status).toBe(302);
+    expect(moved.headers.get("location")).toBe("https://other.example/x");
+    expect((await (await fetch(`${s.origin}/big`)).text()).length).toBe(2048);
+    const t0 = Date.now();
+    await fetch(`${s.origin}/slow`);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(45);
+    expect(s.stats().challengesServed).toBe(1);
+    expect((await fetch(`${s.origin}/v1/forecast`)).status).toBe(404);
   });
 });

@@ -86,3 +86,10 @@ a price drop is Allowed and reported as a note (#2). Kept where the existing rul
 tolerance is written into `policy.maxAmount` as an absolute cap at `add` time instead of a stored percentage, which
 would rise with every accepted price increase. Consequence of P-01 ("only `update` rewrites observed"): the brief's
 `lock` command is folded into `paid-lock update --all`.
+
+**D-019 The probe uses Node's built-in `fetch`, not the `undici` package.** Node's `fetch` is undici, so the
+brief's choice holds without adding a dependency to the allowlist. Settings: `redirect: "manual"` (never
+followed, reported without the Location value), `AbortSignal.timeout` covering headers and body, a streamed body
+cap, no cookie jar (Node's fetch has none), only `accept` / `user-agent` (+ `content-type` for POST) set. No
+`cache` option: it makes fetch add `cache-control` / `pragma` headers, and Node's fetch does not cache anyway. A
+test asserts the exact set of request header names the mock seller receives.

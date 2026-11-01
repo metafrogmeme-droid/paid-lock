@@ -172,6 +172,20 @@ describe("verifyEndpoint: needs your OK", () => {
     expect(r.findings[0]?.line).toContain("200");
   });
 
+  it("explains a redirect and a missing HTTP response", () => {
+    const redirect = verifyEndpoint(lockOf(), KEY, {
+      kind: "not402",
+      status: 302,
+      detail: "redirect to another host, not followed",
+    });
+    expect(redirect.findings[0]?.line).toContain("HTTP 302, redirect to another host, not followed");
+    const none = verifyEndpoint(lockOf(), KEY, { kind: "not402", status: 0, detail: "ECONNREFUSED" });
+    expect(none.findings[0]?.line).toContain("no HTTP response: ECONNREFUSED");
+    expect(verifyEndpoint(lockOf(), KEY, { kind: "not402", status: 0 }).findings[0]?.line).toContain(
+      "(no HTTP response)",
+    );
+  });
+
   it("probe timeout", () => {
     expect(codes(lockOf(), { kind: "timeout" })).toEqual(["PROBE_TIMEOUT"]);
   });

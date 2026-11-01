@@ -15,7 +15,8 @@ import { verdictLine, type Verdict } from "./verdict.ts";
 export type Observation =
   | { kind: "terms"; terms: ObservedTerms }
   | { kind: "unreadable"; reason: string }
-  | { kind: "not402"; status: number }
+  /** status 0 = no HTTP response at all. `detail` never holds header values or bodies (CLAUDE.md §5 rule 13). */
+  | { kind: "not402"; status: number; detail?: string }
   | { kind: "timeout" };
 
 export interface Finding {
@@ -111,7 +112,12 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
       c.add("REQUIREMENTS_UNREADABLE", `(${clip(obs.reason)})`);
       return c.result(key);
     case "not402":
-      c.add("ENDPOINT_NOT_402", `(HTTP ${String(obs.status)})`);
+      c.add(
+        "ENDPOINT_NOT_402",
+        obs.status === 0
+          ? `(no HTTP response${obs.detail === undefined ? "" : `: ${clip(obs.detail)}`})`
+          : `(HTTP ${String(obs.status)}${obs.detail === undefined ? "" : `, ${clip(obs.detail)}`})`,
+      );
       return c.result(key);
     case "timeout":
       c.add("PROBE_TIMEOUT");
