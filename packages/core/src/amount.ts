@@ -2,13 +2,13 @@
 // Amounts are atomic-unit decimal strings compared as bigint, never floats (CLAUDE.md §3 item 1).
 
 /** Decimal digits, no sign, no leading zeros, at most 78 digits (fits uint256). */
-const AMOUNT = /^(?:0|[1-9][0-9]{0,77})$/;
+export const AMOUNT_PATTERN = /^(?:0|[1-9][0-9]{0,77})$/;
 
 /** Largest tolerance accepted at `add` time: +100%. */
 export const MAX_TOLERANCE_BPS = 10_000;
 
 export function isAmount(value: string): boolean {
-  return AMOUNT.test(value);
+  return AMOUNT_PATTERN.test(value);
 }
 
 /** Cap = floor(amount * (10000 + bps) / 10000). `--tolerance 10%` is 1000 bps. */

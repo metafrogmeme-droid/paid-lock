@@ -36,6 +36,7 @@ describe("never-pays source scan", () => {
     expect(isShippedCode("packages/probe/src/probe.test.ts")).toBe(false);
     expect(isShippedCode("action/dist/index.js")).toBe(true);
     expect(isShippedCode("fixtures/mock-seller/src/server.ts")).toBe(false);
+    expect(isShippedCode("packages/core/src/__fixtures__/terms.ts")).toBe(false);
   });
 
   const dir = mkdtempSync(join(tmpdir(), "never-pays-"));

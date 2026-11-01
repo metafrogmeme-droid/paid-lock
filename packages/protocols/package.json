@@ -21,6 +21,7 @@
     "!dist/.tsbuildinfo"
   ],
   "dependencies": {
-    "@paid-lock/core": "workspace:*"
+    "@paid-lock/core": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

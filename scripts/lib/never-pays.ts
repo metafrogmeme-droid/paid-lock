@@ -17,7 +17,7 @@ export const FORBIDDEN: readonly { id: string; pattern: RegExp }[] = [
 
 /** Shipped code: package sources (not tests) and, from M4, the action and its bundle. */
 export function isShippedCode(file: string): boolean {
-  if (/\.test\.[cm]?[jt]s$/u.test(file)) return false;
+  if (/\.test\.[cm]?[jt]s$/u.test(file) || file.includes("/__fixtures__/")) return false;
   return /^packages\/[^/]+\/src\/.+\.[cm]?[jt]s$/u.test(file) || /^action\/.+\.[cm]?js$|^action\/.+\.ts$/u.test(file);
 }
 
