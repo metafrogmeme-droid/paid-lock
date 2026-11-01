@@ -18,7 +18,13 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**/*.ts", "fixtures/*/src/**/*.ts", "scripts/lib/**/*.ts"],
-      exclude: ["**/*.test.ts", "packages/cli/src/bin.ts", "fixtures/mock-seller/src/main.ts", "scripts/lib/files.ts"],
+      exclude: [
+        "**/*.test.ts",
+        "**/__fixtures__/**",
+        "packages/cli/src/bin.ts",
+        "fixtures/mock-seller/src/main.ts",
+        "scripts/lib/files.ts",
+      ],
       reporter: [["text", { skipFull: false }], "json-summary"],
       thresholds: {
         lines: 90,

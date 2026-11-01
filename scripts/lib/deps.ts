@@ -13,6 +13,8 @@ export const ALLOWED = new Set<string>([
   "@paid-lock/probe",
   // SHA-256 and Keccak-256 for integrity strings and EIP-55: pure JS, audited, no dependencies (D-016).
   "@noble/hashes",
+  // Runtime validation of every external byte: lock files, 402 terms (D-005). No dependencies.
+  "zod",
 ]);
 
 /** Wallet, key, signing and payment-client libraries. Never allowed, whatever the allowlist says. */

@@ -3,3 +3,4 @@ CLAUDE.md
 coverage/
 dist/
 .semgrep/paid-lock.ts
+schemas/

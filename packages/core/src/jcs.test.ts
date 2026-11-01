@@ -1,7 +1,7 @@
 // Written with AI help.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { canonicalize, CanonicalizationError } from "./jcs.ts";
+import { canonicalize, CanonicalizationError, prettyCanonical } from "./jcs.ts";
 import type { Json } from "./json.ts";
 
 describe("canonicalize (RFC 8785 JCS)", () => {
@@ -91,6 +91,22 @@ describe("canonicalize (RFC 8785 JCS)", () => {
       fc.property(fc.dictionary(fc.string(), json), (obj) => {
         const reversed = Object.fromEntries(Object.entries(obj).reverse());
         expect(canonicalize(reversed)).toBe(canonicalize(obj));
+      }),
+    );
+  });
+});
+
+describe("prettyCanonical (lockfile layout)", () => {
+  it("indents by two spaces, sorts keys and ends with one newline", () => {
+    expect(prettyCanonical({ b: [1, { d: null, c: "x" }], a: {}, e: [] })).toBe(
+      '{\n  "a": {},\n  "b": [\n    1,\n    {\n      "c": "x",\n      "d": null\n    }\n  ],\n  "e": []\n}\n',
+    );
+  });
+
+  it("property: parses back to the same canonical value", () => {
+    fc.assert(
+      fc.property(fc.jsonValue({ maxDepth: 6 }) as fc.Arbitrary<Json>, (v) => {
+        expect(canonicalize(JSON.parse(prettyCanonical(v)) as Json)).toBe(canonicalize(v));
       }),
     );
   });

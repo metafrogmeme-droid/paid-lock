@@ -9,7 +9,7 @@ import type { Json } from "./json.ts";
 export type Integrity = `sha256-${string}`;
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const INTEGRITY = /^sha256-[A-Za-z0-9+/]{43}=$/;
+export const INTEGRITY_PATTERN = /^sha256-[A-Za-z0-9+/]{43}=$/;
 
 /** Standard Base64 (RFC 4648 §4) with padding. */
 export function base64(bytes: Uint8Array): string {
@@ -39,5 +39,5 @@ export function integrityOf(value: Json): Integrity {
 }
 
 export function isIntegrity(value: string): value is Integrity {
-  return INTEGRITY.test(value);
+  return INTEGRITY_PATTERN.test(value);
 }
