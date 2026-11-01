@@ -32,11 +32,13 @@ export {
   type OptionId,
   type PaymentOption,
 } from "./terms.ts";
+export { normalizeUrl, type UrlResult } from "./url.ts";
 export { VERDICTS, verdictLine, type Verdict } from "./verdict.ts";
 export {
   acceptObservation,
   summarize,
   verifyEndpoint,
+  verifySamples,
   type AcceptResult,
   type EndpointResult,
   type Finding,

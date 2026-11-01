@@ -4,6 +4,8 @@
 # mnemonics. Pattern idea ported from the -claw-guard-near- reference repo; rules written fresh.
 #   gitleaks git --config .gitleaks.toml .     (history; CI uses fetch-depth 0)
 # scripts/gitleaks-selftest.sh checks these rules against random values made at run time.
+# Note: the default generic-api-key rule fires on test URLs like "https://api.<host>:443/..." (keyword "api"
+# followed by a port); test fixtures use other host names instead of an allowlist entry.
 
 title = "paid.lock gitleaks config"
 

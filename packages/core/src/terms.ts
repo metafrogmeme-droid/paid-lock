@@ -4,6 +4,7 @@
 import { normalizeAddress } from "./address.ts";
 import { isAmount } from "./amount.ts";
 import { integrityOf, type Integrity } from "./integrity.ts";
+import { normalizeUrl } from "./url.ts";
 import type { JsonObject } from "./json.ts";
 
 export interface PaymentOption {
@@ -90,12 +91,9 @@ function normalizeOption(o: PaymentOption): { ok: true; option: PaymentOption } 
  * REQUIREMENTS_UNREADABLE upstream.
  */
 export function normalizeTerms(t: ObservedTerms): NormalizeResult {
-  let resourceUrl: string;
-  try {
-    resourceUrl = new URL(t.resourceUrl).href;
-  } catch {
-    return { ok: false, reason: "resource URL is not absolute" };
-  }
+  const url = normalizeUrl(t.resourceUrl);
+  if (!url.ok) return { ok: false, reason: `resource URL: ${url.reason}` };
+  const resourceUrl = url.value;
   if (t.options.length === 0) return { ok: false, reason: "no payment options" };
   const options: PaymentOption[] = [];
   const seen = new Set<OptionId>();

@@ -52,8 +52,12 @@ Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid
 - **Deterministic.** Same input, same bytes: keys sorted by UTF-16 code units (as RFC 8785), two-space indent, one
   trailing newline. No timestamps, no tool version (git records when and by whom). Re-locking unchanged terms is a
   no-op diff. `parseLock` → `serializeLock` is byte-identical.
-- **Endpoint key:** `"<METHOD> <URL>"`, method `GET` or `POST`, URL normalised by the WHATWG URL parser
-  (`new URL(url).href`).
+- **Endpoint key:** `"<METHOD> <URL>"`, method `GET` or `POST`, URL normalised as below.
+- **URL normalisation** (owner decision #10), used for endpoint keys and `observed.resourceUrl`: lowercase the
+  scheme and host, drop the default port (`:80` for http, `:443` for https), drop the fragment. The path and query
+  are kept byte for byte: no trailing-slash, dot-segment, percent-encoding or query rewriting, so any path or query
+  difference is a mismatch. URLs with whitespace, control characters, backslashes, credentials or an
+  ambiguous authority are refused.
 - **`observed`** is what the unpaid probe saw. Only `paid-lock update` rewrites it.
 - **`policy`** is the owner's. The tool never changes or removes a policy entry; `update` only adds a default
   entry (`maxAmount` = observed amount) for an option that has none, so the lock stays valid.
@@ -68,7 +72,7 @@ Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid
 | `lockfileVersion`               | `1`.                                                                                                                               |
 | `observed.protocol`             | `"x402"` (MPP arrives in M5).                                                                                                      |
 | `observed.x402Version`          | Pinned. A different version is `PROTOCOL_VERSION_CHANGED` (Needs your OK).                                                         |
-| `observed.resourceUrl`          | `resource.url` (v2) or the accepts' `resource` (v1), normalised.                                                                   |
+| `observed.resourceUrl`          | `resource.url` (v2) or the accepts' `resource` (v1), normalised as above; any difference is `RESOURCE_URL_MISMATCH` (Blocked).     |
 | `observed.envelopeIntegrity`    | Hash of the parts outside `accepts[]` that can change terms (see below).                                                           |
 | `observed.options.<id>.*`       | The normalised option (fields below) plus `integrity`, its terms hash.                                                             |
 | `policy.options.<id>.maxAmount` | Highest acceptable `amount` in atomic units. Defaults to the observed amount (zero tolerance).                                     |
@@ -113,3 +117,15 @@ what a client agrees to: `extensions` and any top-level field x402 does not defi
 | `extensions["offer-receipt"]` (whole)                                                             | signed restatement of `accepts[]` with per-offer expiry and signatures; the terms it signs are pinned directly. Pinning its signer is a stretch proposal. |
 
 Any other extension change is reported as `TERMS_CHANGED_OTHER` (Needs your OK).
+
+## Verify outcomes per option
+
+| Situation                                            | Code                                                                                           | Verdict                 |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- |
+| same identity, `amount <= maxAmount`                 | none; a drop below the observed amount is reported as a note                                   | Allowed                 |
+| same identity, `amount > maxAmount`                  | `PRICE_ABOVE_LOCK`                                                                             | Blocked                 |
+| same identity, other field changed                   | `PAYMENT_FLOW_CHANGED` / `TERMS_CHANGED_OTHER`                                                 | Blocked / Needs your OK |
+| locked option gone and another appeared              | `PAYTO_CHANGED`, `NETWORK_CHANGED`, `ASSET_CHANGED`, `SCHEME_CHANGED` for each differing field | Blocked                 |
+| extra option, nothing gone                           | `NEW_OPTION_OFFERED`                                                                           | Needs your OK           |
+| locked option gone, nothing appeared                 | `OPTION_REMOVED` (owner decision #11)                                                          | Needs your OK           |
+| the two identical probe requests saw different terms | `TERMS_CHANGED_OTHER`                                                                          | Needs your OK           |

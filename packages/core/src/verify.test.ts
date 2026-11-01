@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
 import { emptyLock, endpointKey, newEndpoint, type Lock } from "./lock.ts";
 import { normalizeTerms, optionId, type ObservedTerms, type PaymentOption } from "./terms.ts";
-import { acceptObservation, summarize, verifyEndpoint, type Observation } from "./verify.ts";
+import { acceptObservation, summarize, verifyEndpoint, verifySamples, type Observation } from "./verify.ts";
 
 const URL = "https://api.example.com/v1/forecast";
 const KEY = endpointKey("GET", URL);
@@ -32,7 +32,7 @@ const withOption = (o: Partial<PaymentOption>): Observation => live(terms({ opti
 describe("verifyEndpoint: allowed", () => {
   it("unchanged terms are allowed", () => {
     const r = verifyEndpoint(lockOf(), KEY, live(terms()));
-    expect(r).toEqual({ key: KEY, verdict: "allowed", line: "Allowed: within your limits", findings: [] });
+    expect(r).toEqual({ key: KEY, verdict: "allowed", line: "Allowed: within your limits", findings: [], notes: [] });
   });
 
   it("reordering accepts[] is not a change", () => {
@@ -40,8 +40,15 @@ describe("verifyEndpoint: allowed", () => {
     expect(codes(lockOf(terms({ options: [option(), b] })), live(terms({ options: [b, option()] })))).toEqual([]);
   });
 
-  it("a price drop is allowed", () => {
-    expect(codes(lockOf(), withOption({ amount: "5000" }))).toEqual([]);
+  it("a price drop is allowed but reported as a note (owner decision #2)", () => {
+    const r = verifyEndpoint(lockOf(), KEY, withOption({ amount: "5000" }));
+    expect(r.findings).toEqual([]);
+    expect(r.verdict).toBe("allowed");
+    expect(r.notes).toEqual([`price dropped for ${optionId(option())} (10000 -> 5000)`]);
+  });
+
+  it("an unchanged price adds no note", () => {
+    expect(verifyEndpoint(lockOf(), KEY, live(terms())).notes).toEqual([]);
   });
 
   it("a price rise within the owner's tolerance is allowed", () => {
@@ -145,11 +152,12 @@ describe("verifyEndpoint: needs your OK", () => {
     ]);
   });
 
-  it("a locked option is no longer offered while another locked one remains", () => {
+  it("a locked option is no longer offered while another locked one remains (OPTION_REMOVED, owner decision #11)", () => {
     const b = option({ payTo: PAY_B });
     const r = verifyEndpoint(lockOf(terms({ options: [option(), b] })), KEY, live(terms({ options: [option()] })));
-    expect(r.findings.map((f) => f.code)).toEqual(["TERMS_CHANGED_OTHER"]);
-    expect(r.findings[0]?.line).toContain("no longer offered");
+    expect(r.findings.map((f) => f.code)).toEqual(["OPTION_REMOVED"]);
+    expect(r.verdict).toBe("needsOk");
+    expect(r.findings[0]?.line).toContain(PAY_B);
   });
 
   it("protocol version bump (v2 -> v1)", () => {
@@ -288,6 +296,7 @@ describe("properties", () => {
     const observations: Observation[] = [
       withOption({ payTo: PAY_B }),
       withOption({ amount: "99999" }),
+      withOption({ amount: "1" }),
       withOption({ extra: {} }),
       { kind: "timeout" },
       { kind: "not402", status: 404 },
@@ -299,5 +308,45 @@ describe("properties", () => {
         expect(/^(Allowed: within your limits|Blocked by your rule: |Needs your OK: )/.test(line)).toBe(true);
       }
     }
+  });
+});
+
+describe("verifySamples (two identical unpaid requests)", () => {
+  it("identical samples give the single-sample result", () => {
+    expect(verifySamples(lockOf(), KEY, [live(terms()), live(terms())])).toEqual(
+      verifyEndpoint(lockOf(), KEY, live(terms())),
+    );
+  });
+
+  it("samples that differ need your OK, and every sample's findings are kept", () => {
+    const r = verifySamples(lockOf(), KEY, [live(terms()), withOption({ payTo: PAY_B })]);
+    expect(r.findings.map((f) => f.code).sort()).toEqual(["PAYTO_CHANGED", "TERMS_CHANGED_OTHER"]);
+    expect(r.findings.find((f) => f.code === "TERMS_CHANGED_OTHER")?.line).toContain(
+      "differ between two identical requests",
+    );
+    expect(r.verdict).toBe("blocked");
+  });
+
+  it("samples that differ only in option order are stable", () => {
+    const b = option({ payTo: PAY_B });
+    const lock = lockOf(terms({ options: [option(), b] }));
+    const r = verifySamples(lock, KEY, [
+      live(terms({ options: [option(), b] })),
+      live(terms({ options: [b, option()] })),
+    ]);
+    expect(r.verdict).toBe("allowed");
+  });
+
+  it("one unreadable sample is blocked", () => {
+    expect(verifySamples(lockOf(), KEY, [live(terms()), { kind: "unreadable", reason: "x" }]).verdict).toBe("blocked");
+  });
+
+  it("duplicate findings across samples are reported once", () => {
+    const r = verifySamples(lockOf(), KEY, [{ kind: "timeout" }, { kind: "timeout" }]);
+    expect(r.findings.map((f) => f.code)).toEqual(["PROBE_TIMEOUT"]);
+  });
+
+  it("needs at least one sample", () => {
+    expect(() => verifySamples(lockOf(), KEY, [])).toThrow(RangeError);
   });
 });

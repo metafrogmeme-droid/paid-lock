@@ -78,3 +78,11 @@ allowlist names it explicitly; the wallet denylist still blocks `@noble/curves` 
 serialisation (what RFC 8785 is defined by), keys sorted by UTF-16 code units, I-JSON enforced
 (`String.prototype.isWellFormed`, finite numbers, plain objects), depth ≤ 64 containers. Tested against the
 RFC's own examples plus property tests. A dependency would add supply-chain surface for little code.
+
+**D-018 Owner decisions of 1 Nov 2026 for M3 (approved list #1-#11).** Implemented: fail on Blocked and on Needs your
+OK by default (`--fail-on blocked` loosens); strict URL normalisation (#10); `OPTION_REMOVED` = Needs your OK (#11);
+a price drop is Allowed and reported as a note (#2). Kept where the existing rule is stricter, as the owner allowed:
+(a) the code stays `PRICE_ABOVE_LOCK` (brief §3 enum, shipped in M2) rather than `PRICE_INCREASED`; (b) an opt-in
+tolerance is written into `policy.maxAmount` as an absolute cap at `add` time instead of a stored percentage, which
+would rise with every accepted price increase. Consequence of P-01 ("only `update` rewrites observed"): the brief's
+`lock` command is folded into `paid-lock update --all`.
