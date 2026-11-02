@@ -70,6 +70,9 @@ const fetchWithPayment = wrapFetchWithPayment(fetch, http);
 // a changed payTo now fails with "Payment creation aborted: Blocked by your rule: payTo changed since paid.lock"
 ```
 
+To refuse a `paid.lock` that was edited on the host after review, pin its digest: `paid-lock digest` prints it, and
+`loadLock("paid.lock", { expectedDigest })` refuses any other lock.
+
 Or call the check yourself: `checkAgainstLock(lock, "GET", url, paymentRequired)` returns the verdict, reason code
 and verdict line.
 

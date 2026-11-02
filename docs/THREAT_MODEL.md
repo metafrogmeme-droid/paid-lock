@@ -49,12 +49,13 @@ paid.lock itself holds **no keys and moves no money** (CLAUDE.md §5 rule 3).
 | T23 | An endpoint that is not pinned copies a pinned endpoint's 402 (resource URL included) so the agent pays under the pinned entry (confused deputy) | the x402 adapter checks the URL the agent requested (`requestUrl`), never the 402's own `resource.url`; the 402's URL must then match the lock as well                                                                                                                                                                                               | unit tests (SDK integration test to follow, D-024)                                          |
 | T24 | The adapter is wired wrongly (only one hook registered, or the fetch wrapper given a different HTTP client), so payments skip the check          | a 402 that `onPaymentRequired` never saw throws `PaidLockHookError` in the before-payment hook: the payment stops; guard-reach lint: every pay path calls a check                                                                                                                                                                                    | unit test, `pnpm check:guard-reach`                                                         |
 | T25 | A client policy or extension changes the requirements after the 402 was checked (other payTo, higher amount)                                     | the before-payment hook re-checks the 402 and the selected option at that moment                                                                                                                                                                                                                                                                     | unit tests (SDK integration test to follow, D-024)                                          |
+| T26 | Someone who can write files on the agent's host edits `paid.lock` (another payTo, a higher maximum) so the runtime allows it                     | optional digest pin (P-04): `loadLock(path, { expectedDigest })` refuses a lock whose digest differs from the reviewed one set at deploy time; an empty or malformed pin is an error                                                                                                                                                                 | unit tests (core, runtime, CLI)                                                             |
 
 ## Known gaps (tracked)
 
 - **Unmodelled extension changes** show only "extensions changed" because the lock stores the envelope hash, not its
   content.
-- **No lock signing yet.** The runtime (`loadLock`) still trusts whatever `paid.lock` is on disk: anyone who can
-  write that file on the agent's host can change what is allowed (P-04 lock digest pin, waiting for approval;
-  stretch: signed locks).
+- **No lock signing yet.** Without `expectedDigest`, the runtime (`loadLock`) trusts whatever `paid.lock` is on
+  disk. With it (P-04), the pin is only as strong as the place the digest is kept: an attacker who can change both
+  the lock and the deployed digest (or the agent's code) is not stopped. Stretch: Sigstore-signed locks.
 - **Nothing MPP-specific is modelled yet (M5).**

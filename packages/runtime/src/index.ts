@@ -10,4 +10,4 @@ export {
   type PaymentRequiredContextLike,
 } from "./adapters/x402-client.ts";
 export { allows, checkAgainstLock, checkResponse, checkSelected, type FailOn, type LockCheck } from "./check.ts";
-export { loadLock, LockLoadError } from "./load.ts";
+export { loadLock, LockLoadError, type LoadLockOptions } from "./load.ts";

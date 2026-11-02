@@ -1,7 +1,7 @@
 // Written with AI help.
 // Read paid.lock for pay-time checks. The only I/O in this package. The lock is validated with the
 // same schema as the CLI uses and frozen, so the checks run against exactly what was reviewed.
-import { MAX_LOCK_BYTES, parseLock, type Lock } from "@paid-lock/core";
+import { isIntegrity, lockDigest, MAX_LOCK_BYTES, parseLock, type Lock } from "@paid-lock/core";
 import { readFile, stat } from "node:fs/promises";
 
 export class LockLoadError extends Error {
@@ -21,8 +21,21 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
+export interface LoadLockOptions {
+  /**
+   * Digest of the reviewed lock (`paid-lock digest`, P-04). When set, a lock with any other digest is
+   * refused. Set it at build or deploy time, outside the reach of whoever can write paid.lock on the host.
+   */
+  expectedDigest?: string;
+}
+
 /** Load and validate a lock file (default `paid.lock` in the working directory). Throws LockLoadError. */
-export async function loadLock(path = "paid.lock"): Promise<Readonly<Lock>> {
+export async function loadLock(path = "paid.lock", options: LoadLockOptions = {}): Promise<Readonly<Lock>> {
+  const { expectedDigest } = options;
+  // An empty or malformed value (e.g. an unset environment variable) must not silently turn the pin off.
+  if (expectedDigest !== undefined && !isIntegrity(expectedDigest)) {
+    throw new LockLoadError("expectedDigest is not a sha256-<base64> digest (see paid-lock digest)");
+  }
   let size: number;
   try {
     const s = await stat(path);
@@ -35,5 +48,13 @@ export async function loadLock(path = "paid.lock"): Promise<Readonly<Lock>> {
   if (size > MAX_LOCK_BYTES) throw new LockLoadError(`${path} is too large`);
   const r = parseLock(await readFile(path, "utf8"));
   if (!r.ok) throw new LockLoadError(`${path} is not a valid paid.lock`, r.errors);
+  if (expectedDigest !== undefined) {
+    const actual = lockDigest(r.lock);
+    if (actual !== expectedDigest) {
+      throw new LockLoadError(
+        `${path} does not match the expected digest (expected ${expectedDigest}, found ${actual})`,
+      );
+    }
+  }
   return deepFreeze(r.lock);
 }

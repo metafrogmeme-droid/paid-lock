@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { normalizeAddress } from "./address.ts";
 import { AMOUNT_PATTERN, applyTolerance } from "./amount.ts";
-import { INTEGRITY_PATTERN, integrityOf } from "./integrity.ts";
+import { INTEGRITY_PATTERN, integrityOf, type Integrity } from "./integrity.ts";
 import { MAX_DEPTH, prettyCanonical } from "./jcs.ts";
 import type { Json, JsonObject } from "./json.ts";
 import { TIGHTENABLE } from "./reasons.ts";
@@ -148,6 +148,15 @@ export function serializeLock(lock: Lock): string {
 }
 
 export type ParseLockResult = { ok: true; lock: Lock } | { ok: false; errors: string[] };
+
+/**
+ * Digest of a lock (P-04, D-026): `sha256-<base64>` over the RFC 8785 canonical JSON of the parsed lock,
+ * so it depends on what the lock says, not on how the file is formatted. `paid-lock digest` prints it;
+ * the runtime's `loadLock(path, { expectedDigest })` refuses a lock with another digest.
+ */
+export function lockDigest(lock: Lock): Integrity {
+  return integrityOf(lock as unknown as Json);
+}
 
 export function parseLock(text: string): ParseLockResult {
   if (new TextEncoder().encode(text).length > MAX_LOCK_BYTES) return { ok: false, errors: ["paid.lock is too large"] };

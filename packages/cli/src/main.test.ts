@@ -1,4 +1,5 @@
 // Written with AI help.
+import { lockDigest, parseLock } from "@paid-lock/core";
 import { parseScenario, startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -344,5 +345,35 @@ describe("explain", () => {
   it("fails on an unknown code", async () => {
     expect(await main(["explain", "NOPE"], io())).toBe(EXIT.toolError);
     expect(await main(["explain"], io())).toBe(EXIT.toolError);
+  });
+});
+
+describe("digest (P-04)", () => {
+  it("prints the digest of paid.lock, the value loadLock's expectedDigest takes", async () => {
+    await initAndAdd("/a");
+    const parsed = parseLock(readLock());
+    if (!parsed.ok) throw new Error("lock is invalid");
+    const i = io();
+    expect(await run(["digest"], i)).toBe(EXIT.allowed);
+    expect(i.text()).toBe(`${lockDigest(parsed.lock)}\n`);
+    const j = io();
+    expect(await run(["digest", "--json"], j)).toBe(EXIT.allowed);
+    expect(JSON.parse(j.text())).toEqual({ lockfile: lockfile, digest: lockDigest(parsed.lock) });
+  });
+
+  it("changes when the lock changes", async () => {
+    await initAndAdd("/a");
+    const before = io();
+    await run(["digest"], before);
+    expect(await run(["add", url("/b"), LOCAL])).toBe(EXIT.allowed);
+    const after = io();
+    await run(["digest"], after);
+    expect(after.text()).not.toBe(before.text());
+  });
+
+  it("is a tool error when paid.lock is missing or invalid", async () => {
+    expect(await run(["digest"])).toBe(EXIT.toolError);
+    writeFileSync(lockfile, "{}");
+    expect(await run(["digest"])).toBe(EXIT.toolError);
   });
 });

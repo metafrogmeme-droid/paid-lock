@@ -5,6 +5,7 @@ import { option, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
 import {
   emptyLock,
   endpointKey,
+  lockDigest,
   newEndpoint,
   parseLock,
   serializeLock,
@@ -154,6 +155,53 @@ describe("serializeLock / parseLock", () => {
         const text = serializeLock(lockWith(terms({ options: subset }), bps));
         const parsed = parseLock(text);
         expect(parsed.ok && serializeLock(parsed.lock)).toBe(text);
+      }),
+    );
+  });
+});
+
+describe("lockDigest (P-04)", () => {
+  it("is a sha256-<base64> integrity string, the same for the same lock", () => {
+    const d = lockDigest(lockWith());
+    expect(d).toMatch(/^sha256-[A-Za-z0-9+/]{43}=$/u);
+    expect(lockDigest(lockWith())).toBe(d);
+  });
+
+  it("is the digest of what the file says, not of its formatting", () => {
+    const text = serializeLock(lockWith());
+    const reformatted = JSON.stringify(JSON.parse(text));
+    const a = parseLock(text);
+    const b = parseLock(reformatted);
+    if (!a.ok || !b.ok) throw new Error("fixture lock is invalid");
+    expect(lockDigest(b.lock)).toBe(lockDigest(a.lock));
+  });
+
+  it("changes with any change to the lock: observed terms, policy or a new endpoint", () => {
+    const base = lockDigest(lockWith());
+    expect(
+      lockDigest(lockWith(terms({ options: [option({ payTo: "0x000000000000000000000000000000000000dEaD" })] }))),
+    ).not.toBe(base);
+    expect(lockDigest(lockWith(terms(), 1000))).not.toBe(base);
+    const more = lockWith();
+    more.endpoints[endpointKey("GET", "https://shop.example.com/other")] = newEndpoint(normalized(), {
+      toleranceBps: 0,
+    });
+    expect(lockDigest(more)).not.toBe(base);
+  });
+
+  it("property: does not depend on the order of endpoint keys", () => {
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.constantFrom("a", "b", "c", "d"), { minLength: 1 }), (paths) => {
+        const build = (order: string[]): Lock => {
+          const lock = emptyLock();
+          for (const p of order) {
+            lock.endpoints[endpointKey("GET", `https://shop.example.com/${p}`)] = newEndpoint(normalized(), {
+              toleranceBps: 0,
+            });
+          }
+          return lock;
+        };
+        expect(lockDigest(build([...paths].reverse()))).toBe(lockDigest(build(paths)));
       }),
     );
   });
