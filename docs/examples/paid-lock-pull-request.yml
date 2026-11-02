@@ -1,0 +1,28 @@
+# Written with AI help. Example workflow: check paid.lock on every pull request and push to main.
+# Copy to .github/workflows/paid-lock.yml. Read-only, no secret. Use `pull_request`, never
+# `pull_request_target`: the probe reads paid.lock from the PR, so it must run without write access.
+name: paid.lock
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Pin to the release's full commit SHA once 0.1.0 is published (nothing is published yet).
+      - name: paid.lock
+        uses: metafrogmeme-droid/paid-lock@v0.1.0
+        with:
+          lockfile: paid.lock
+          fail-on: needs-ok # default: fail on "Blocked by your rule" and on "Needs your OK"

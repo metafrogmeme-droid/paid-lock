@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# The bundled GitHub Action must be committed (action.yml runs it); CI checks it is fresh.
+!action/dist/
 coverage/
 *.tsbuildinfo
 .env
@@ -7,3 +9,4 @@ coverage/
 !.env.example
 *.log
 .DS_Store
+.ci/

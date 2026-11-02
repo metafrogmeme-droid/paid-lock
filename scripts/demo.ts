@@ -8,63 +8,21 @@ import { execFile, execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parseScenario, startMockSeller, type Scenario } from "../fixtures/mock-seller/src/index.ts";
+import {
+  DEMO_PAY,
+  demoScenario,
+  SWAPPED_PAY_TO,
+  type DemoEndpoint,
+} from "../fixtures/mock-seller/src/demo-scenarios.ts";
+import { startMockSeller } from "../fixtures/mock-seller/src/index.ts";
 import { scanText } from "./lib/never-pays.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const bin = join(root, "packages/cli/dist/bin.js");
-const ASSET = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"; // Base Sepolia (testnet) USDC, from the x402 v2 spec example
-const PAY = {
-  forecast: "0x0000000000000000000000000000000000001001",
-  quote: "0x0000000000000000000000000000000000002002",
-  news: "0x0000000000000000000000000000000000003003",
-};
-const SWAPPED = "0x000000000000000000000000000000000000dEaD".toLowerCase();
-
-type Name = keyof typeof PAY;
-interface Change {
-  payTo?: string;
-  network?: string;
-  amount?: string;
-  version?: string;
-  raw?: { status: number; headers?: Record<string, string> };
-}
-
-function scenario(changes: Partial<Record<Name, Change>> = {}): Scenario {
-  const route = (name: Name, amount: string) => {
-    const c = changes[name] ?? {};
-    if (c.raw !== undefined)
-      return { method: "GET" as const, path: `/${name}`, respond: { kind: "raw" as const, ...c.raw } };
-    return {
-      method: "GET" as const,
-      path: `/${name}`,
-      respond: {
-        kind: "x402-v2" as const,
-        paymentRequired: {
-          x402Version: 2,
-          resource: { url: `\${origin}/${name}` },
-          accepts: [
-            {
-              scheme: "exact",
-              network: c.network ?? "eip155:84532",
-              amount: c.amount ?? amount,
-              asset: ASSET,
-              payTo: c.payTo ?? PAY[name],
-              maxTimeoutSeconds: 60,
-              extra: { name: "USDC", version: c.version ?? "2" },
-            },
-          ],
-        },
-      },
-    };
-  };
-  return parseScenario({
-    _label:
-      "Written with AI help, test fixture. payTo values are fake test addresses; the asset is Base Sepolia (testnet) USDC.",
-    name: "demo",
-    routes: [route("forecast", "10000"), route("quote", "25000"), route("news", "5000")],
-  });
-}
+const PAY = DEMO_PAY;
+const SWAPPED = SWAPPED_PAY_TO;
+type Name = DemoEndpoint;
+const scenario = demoScenario;
 
 const seller = await startMockSeller({ scenario: scenario() });
 const dir = mkdtempSync(join(tmpdir(), "paid-lock-demo-"));

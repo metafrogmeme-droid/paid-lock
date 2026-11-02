@@ -114,6 +114,7 @@ describe("runAction against the mock seller", () => {
     expect(await runAction(env({ "INPUT_FAIL-ON": "never" }), dir, c.log)).toBe(3);
     expect(c.lines.join("\n")).toContain("::error::paid-lock: fail-on must be needs-ok or blocked");
     expect(await runAction(env({ INPUT_LOCKFILE: "missing.lock" }), dir, () => undefined)).toBe(3);
+    expect(readFileSync(join(dir, "output.txt"), "utf8")).toContain("verdict=error\n");
     writeFileSync(join(dir, "paid.lock"), "{}");
     expect(await runAction(env(), dir, () => undefined)).toBe(3);
   });
