@@ -113,3 +113,10 @@ bundle's dependencies to zod and @noble/hashes (both already allowlisted). Selle
 and for workflow commands. SARIF 2.1.0 results point at the endpoint's line in `paid.lock`, with stable fingerprints.
 The bundle is skipped by copy-lint and Semgrep (generated from scanned sources plus third-party code) but is
 included in the never-pays scan and the dependency allowlist (`@paid-lock/action` is a guarded package).
+
+**D-022 Optional sticky PR comment (input `comment`, default `false`).** One comment per pull request, found again by
+a hidden marker and updated in place, built from the same escaped Markdown as the job summary (truncated below
+GitHub's 65,536-character limit). It talks only to `GITHUB_API_URL` with the job's token, which is never logged;
+redirects are refused. It is best effort: a refusal (for example a read-only token on a fork PR) is a warning and
+never changes the verdict or the exit code. Enabling it needs `pull-requests: write`; the default stays
+`contents: read`. No `@actions/*` package (plain `fetch`).

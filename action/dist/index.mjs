@@ -7,7 +7,7 @@ var __export = (target, all) => {
 };
 
 // action/src/run.ts
-import { appendFileSync, readFileSync as readFileSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { appendFileSync, readFileSync as readFileSync3, writeFileSync as writeFileSync2 } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 
 // packages/probe/src/probe.ts
@@ -387,10 +387,10 @@ function normalizeAddress(network, value) {
   if (!PRINTABLE_NO_SPACE.test(value))
     return { ok: false, reason: "address is empty or has spaces or control characters" };
   if (!network.startsWith("eip155:") || !EVM_ADDRESS.test(value)) return { ok: true, value };
-  const body = value.slice(2);
-  const checksummed = toChecksumAddress(`0x${body}`);
-  const mixedCase = body !== body.toLowerCase() && body !== body.toUpperCase();
-  if (mixedCase && `0x${body}` !== checksummed)
+  const body2 = value.slice(2);
+  const checksummed = toChecksumAddress(`0x${body2}`);
+  const mixedCase = body2 !== body2.toLowerCase() && body2 !== body2.toUpperCase();
+  if (mixedCase && `0x${body2}` !== checksummed)
     return { ok: false, reason: "EVM address has an invalid EIP-55 checksum" };
   return { ok: true, value: checksummed };
 }
@@ -15109,7 +15109,7 @@ function generateRecordCheck(doc, ctx, schema, accessor) {
   }, `return INVALID;`);
   return outputVar;
 }
-function emitOwnKeys(doc, ctx, accessor, kVar, body, onSymbol) {
+function emitOwnKeys(doc, ctx, accessor, kVar, body2, onSymbol) {
   const propIsEnumerableConst = addConstant(ctx, Object.prototype.propertyIsEnumerable);
   const symsVar = newVar(ctx);
   const keysVar = newVar(ctx);
@@ -15120,7 +15120,7 @@ function emitOwnKeys(doc, ctx, accessor, kVar, body, onSymbol) {
   doc.indented((d) => {
     d.write(`const ${kVar} = ${keysVar}[${iVar}];`);
     d.write(`if (${kVar} === "__proto__" || !${propIsEnumerableConst}.call(${accessor}, ${kVar})) continue;`);
-    body(d);
+    body2(d);
   });
   doc.write(`}`);
   doc.write(`for (let ${iVar} = 0; ${iVar} < ${symsVar}.length; ${iVar}++) {`);
@@ -15130,7 +15130,7 @@ function emitOwnKeys(doc, ctx, accessor, kVar, body, onSymbol) {
     if (onSymbol)
       d.write(onSymbol);
     else
-      body(d);
+      body2(d);
   });
   doc.write(`}`);
 }
@@ -21094,8 +21094,8 @@ function parseX402V2Header(header) {
     }
   };
 }
-function parseX402V1Body(body) {
-  const json2 = parseJsonGuarded(body, MAX_BODY_BYTES);
+function parseX402V1Body(body2) {
+  const json2 = parseJsonGuarded(body2, MAX_BODY_BYTES);
   if (!json2.ok) return json2;
   const r = PaymentRequiredV1.safeParse(json2.value);
   if (!r.success) return zodReason("x402 v1", r.error);
@@ -21464,6 +21464,92 @@ async function runVerify(lock, opts) {
 // packages/cli/src/main.ts
 var VERSION = "0.0.0";
 
+// action/src/comment.ts
+import { readFileSync as readFileSync2 } from "node:fs";
+var COMMENT_MARKER = "<!-- paid-lock:verify -->";
+var MAX_COMMENT_CHARS = 65e3;
+var MAX_PAGES = 10;
+var REPO = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/(?!\.{1,2}$)[A-Za-z0-9_.-]{1,100}$/;
+var HttpError = class extends Error {
+  status;
+  constructor(status) {
+    super(`HTTP ${String(status)}`);
+    this.status = status;
+  }
+};
+function pullRequestNumber(env) {
+  if (env["GITHUB_EVENT_NAME"] !== "pull_request") return void 0;
+  const path = env["GITHUB_EVENT_PATH"];
+  if (path === void 0) return void 0;
+  try {
+    const event = JSON.parse(readFileSync2(path, "utf8"));
+    const n = event.pull_request?.number;
+    return typeof n === "number" && Number.isSafeInteger(n) && n > 0 ? n : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function body(markdown) {
+  const full = `${COMMENT_MARKER}
+${markdown}`;
+  if (full.length <= MAX_COMMENT_CHARS) return full;
+  const note = "\n\n(truncated; the full report is in the job summary)";
+  return full.slice(0, MAX_COMMENT_CHARS - note.length) + note;
+}
+async function postStickyComment(env, token, markdown, log) {
+  const pr = pullRequestNumber(env);
+  if (pr === void 0 || token === "") {
+    log("::notice::paid-lock: no PR comment (not a pull_request event, or no token)");
+    return "skipped";
+  }
+  const repo = env["GITHUB_REPOSITORY"] ?? "";
+  if (!REPO.test(repo)) {
+    log("::warning::paid-lock: could not post the PR comment (GITHUB_REPOSITORY is not owner/repo)");
+    return "failed";
+  }
+  const api = (env["GITHUB_API_URL"] ?? "https://api.github.com").replace(/\/+$/, "");
+  const call = async (method, path, payload) => {
+    const res = await fetch(`${api}${path}`, {
+      method,
+      redirect: "error",
+      signal: AbortSignal.timeout(15e3),
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2022-11-28",
+        "user-agent": "paid-lock-action",
+        ...payload === void 0 ? {} : { "content-type": "application/json" }
+      },
+      ...payload === void 0 ? {} : { body: JSON.stringify(payload) }
+    });
+    if (!res.ok) throw new HttpError(res.status);
+    return res.json();
+  };
+  try {
+    let mine;
+    for (let page = 1; page <= MAX_PAGES && mine === void 0; page += 1) {
+      const list = await call(
+        "GET",
+        `/repos/${repo}/issues/${String(pr)}/comments?per_page=100&page=${String(page)}`
+      );
+      mine = list.find(
+        (c) => typeof c.body === "string" && c.body.startsWith(COMMENT_MARKER) && typeof c.id === "number"
+      )?.id;
+      if (list.length < 100) break;
+    }
+    if (mine === void 0) {
+      await call("POST", `/repos/${repo}/issues/${String(pr)}/comments`, { body: body(markdown) });
+      return "created";
+    }
+    await call("PATCH", `/repos/${repo}/issues/comments/${String(mine)}`, { body: body(markdown) });
+    return "updated";
+  } catch (err) {
+    const why = err instanceof HttpError ? err.message : "request failed";
+    log(`::warning::paid-lock: could not post the PR comment (${why}); the verdict is unchanged`);
+    return "failed";
+  }
+}
+
 // action/src/render.ts
 var MD_SPECIAL = /[\\`*_{}[\]()#+\-.!|~]/g;
 function escapeMarkdown(text) {
@@ -21565,10 +21651,12 @@ async function runAction(env, workspace, log) {
     const lockfile = input2(env, "lockfile", "paid.lock");
     const failOn = input2(env, "fail-on", "needs-ok");
     const sarifPath = input2(env, "sarif", "paid-lock.sarif");
+    const comment = input2(env, "comment", "false");
     if (!isFailOn(failOn)) throw new CliError("fail-on must be needs-ok or blocked");
+    if (comment !== "true" && comment !== "false") throw new CliError("comment must be true or false");
     const lockPath = inWorkspace(workspace, lockfile);
     const lock = readLock(lockPath);
-    const lockText = readFileSync2(lockPath, "utf8");
+    const lockText = readFileSync3(lockPath, "utf8");
     const run = await runVerify(lock, { failOn });
     for (const r of run.results) {
       log(r.key);
@@ -21579,8 +21667,10 @@ async function runAction(env, workspace, log) {
     const { allowed, blocked, needsOk, verdict } = run.summary;
     log(`${String(allowed)} allowed, ${String(blocked)} blocked, ${String(needsOk)} needed your OK`);
     for (const a of renderAnnotations(run.results, lockfile, lockText)) log(a);
+    const markdown = renderSummaryMarkdown(run.results, run.summary, lockfile);
     const summaryFile = env["GITHUB_STEP_SUMMARY"];
-    if (summaryFile) appendFileSync(summaryFile, renderSummaryMarkdown(run.results, run.summary, lockfile));
+    if (summaryFile) appendFileSync(summaryFile, markdown);
+    if (comment === "true") await postStickyComment(env, input2(env, "github-token", ""), markdown, log);
     if (sarifPath !== "")
       writeFileSync2(
         inWorkspace(workspace, sarifPath),
