@@ -14,3 +14,5 @@ Pure core, adapters around it (CLAUDE.md §4).
 | `action/`              | GitHub Action (M4)                                                    | GitHub job outputs        |
 | `fixtures/mock-seller` | loopback-only 402 server for tests and the demo; never settles        | loopback only             |
 | `scripts/`             | copy-lint, dependency allowlist, never-pays scan, gitleaks self-test  | repo files                |
+
+Claw Pay's gate can enforce the same lock at pay time: see [CLAW_PAY.md](CLAW_PAY.md) (design note).
