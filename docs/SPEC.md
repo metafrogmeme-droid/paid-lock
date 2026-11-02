@@ -56,6 +56,23 @@ a price drop) change no verdict.
 
 `policy.tighten` can turn any "Needs your OK" code into Blocked for one endpoint; nothing can loosen a Blocked code.
 
+## Runtime library
+
+`@paid-lock/runtime` (M5) checks a 402 against `paid.lock` at pay time with the same core check as the CLI and
+the Action (DECISIONS D-023). It never pays, signs or loads a key, and it makes no network request.
+
+| Function                                                      | Returns / does                                                                                                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadLock(path = "paid.lock")`                                | The validated, deep-frozen lock. Throws `LockLoadError` (with `errors` from the schema) when the file is missing, too large or invalid.              |
+| `checkAgainstLock(lock, method, url, paymentRequired)`        | `{ verdict, code, detail, findings, notes }` for a PaymentRequired the client already decoded (x402 v2 header object or x402 v1 body). Never throws. |
+| `checkResponse(lock, method, url, { status, headers, body })` | The same result for a raw unpaid HTTP response (header names in any case). Never throws.                                                             |
+
+`verdict` is `allowed`, `blocked` or `needsOk`; `code` is the reason code of the first finding with that verdict
+(`OK` when allowed); `detail` is the single verdict line ("Allowed: within your limits", "Blocked by your rule: …",
+"Needs your OK: …"). An endpoint that is not in the lock, a method other than GET or POST, a URL that cannot be read
+and unreadable terms are all Blocked. One response is checked (no second sample at pay time). Which verdicts let a
+payment go ahead is the caller's choice; the hook adapter (M5 part 2) defaults to paying only on `allowed`.
+
 ## Network targets
 
 Before any request the probe checks where it would connect. Private (10/8, 172.16/12, 192.168/16, 100.64/10,

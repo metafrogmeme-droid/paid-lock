@@ -115,6 +115,25 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  packages/runtime:
+    dependencies:
+      '@paid-lock/core':
+        specifier: workspace:*
+        version: link:../core
+      '@paid-lock/protocols':
+        specifier: workspace:*
+        version: link:../protocols
+    devDependencies:
+      '@paid-lock/mock-seller':
+        specifier: workspace:*
+        version: link:../../fixtures/mock-seller
+      '@paid-lock/probe':
+        specifier: workspace:*
+        version: link:../probe
+      paid-lock:
+        specifier: workspace:*
+        version: link:../cli
+
 packages:
 
   '@babel/helper-string-parser@7.29.11':

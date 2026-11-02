@@ -128,7 +128,12 @@ export function parseX402V2Header(header: string): ParseResult {
   if (!decoded.ok) return decoded;
   const json = parseJsonGuarded(decoded.text, MAX_HEADER_BYTES);
   if (!json.ok) return json;
-  const r = PaymentRequiredV2.safeParse(json.value);
+  return fromV2Json(json.value);
+}
+
+/** x402 v2 PaymentRequired from JSON that already passed the input guards. */
+export function fromV2Json(value: unknown): ParseResult {
+  const r = PaymentRequiredV2.safeParse(value);
   if (!r.success) return zodReason("x402 v2", r.error);
   const options: PaymentOption[] = [];
   for (const req of r.data.accepts) {
@@ -166,7 +171,12 @@ export function parseX402V2Header(header: string): ParseResult {
 export function parseX402V1Body(body: string): ParseResult {
   const json = parseJsonGuarded(body, MAX_BODY_BYTES);
   if (!json.ok) return json;
-  const r = PaymentRequiredV1.safeParse(json.value);
+  return fromV1Json(json.value);
+}
+
+/** x402 v1 body from JSON that already passed the input guards. */
+export function fromV1Json(value: unknown): ParseResult {
+  const r = PaymentRequiredV1.safeParse(value);
   if (!r.success) return zodReason("x402 v1", r.error);
   const resources = new Set(r.data.accepts.map((a) => a.resource));
   const [resourceUrl] = resources;

@@ -24,8 +24,9 @@ export default tseslint.config(
   },
   {
     // The core is pure: no I/O, no clock, no randomness (CLAUDE.md §0, §4).
-    files: ["packages/core/src/**/*.ts"],
-    ignores: ["**/*.test.ts"],
+    // The runtime check is pure as well; load.ts is its only I/O.
+    files: ["packages/core/src/**/*.ts", "packages/runtime/src/**/*.ts"],
+    ignores: ["**/*.test.ts", "packages/runtime/src/load.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -33,7 +34,7 @@ export default tseslint.config(
           patterns: [
             {
               regex: "^(node:)?(fs|http|https|net|child_process|dns|os|process|tls|dgram|worker_threads)(/.*)?$",
-              message: "packages/core must stay free of I/O.",
+              message: "packages/core and the runtime check must stay free of I/O.",
             },
           ],
         },
@@ -41,8 +42,8 @@ export default tseslint.config(
       "no-restricted-globals": ["error", "fetch", "process", "setTimeout", "setInterval", "crypto"],
       "no-restricted-properties": [
         "error",
-        { object: "Date", property: "now", message: "core is deterministic: pass time in." },
-        { object: "Math", property: "random", message: "core is deterministic." },
+        { object: "Date", property: "now", message: "the pure core is deterministic: pass time in." },
+        { object: "Math", property: "random", message: "the pure core is deterministic." },
       ],
     },
   },
