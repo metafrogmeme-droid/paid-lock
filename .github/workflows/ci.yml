@@ -37,7 +37,7 @@ env:
 
 jobs:
   check:
-    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, audit, mock seller, demo)
+    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, audit, mock seller, demo, action dist)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -83,6 +83,9 @@ jobs:
 
       - name: Demo (paid-lock add/verify against the mock seller; DEMO OK line, 0 payments sent)
         run: pnpm demo
+
+      - name: Action bundle is fresh (action/dist rebuilt from source matches the committed file)
+        run: pnpm check:action-dist
 
       - name: Dependency audit
         run: pnpm audit --audit-level low

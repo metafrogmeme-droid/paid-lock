@@ -24,12 +24,15 @@
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm copy-lint && pnpm check:deps && pnpm check:never-pays && pnpm smoke:mock-seller",
     "smoke:mock-seller": "node scripts/smoke-mock-seller.ts",
     "gen:schema": "node scripts/gen-lock-schema.ts",
-    "demo": "pnpm build && node scripts/demo.ts"
+    "demo": "pnpm build && node scripts/demo.ts",
+    "build:action": "node scripts/build-action.ts",
+    "check:action-dist": "node scripts/build-action.ts && git diff --exit-code -- action/dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
     "@types/node": "^22.18.0",
     "@vitest/coverage-v8": "^5.0.0",
+    "esbuild": "^0.28.2",
     "eslint": "^10.0.0",
     "fast-check": "^4.0.0",
     "prettier": "^3.6.0",

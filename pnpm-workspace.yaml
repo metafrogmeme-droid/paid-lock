@@ -2,6 +2,7 @@
 packages:
   - packages/*
   - fixtures/*
+  - action
 
 # Supply chain: only install versions published at least 7 days ago (minutes).
 minimumReleaseAge: 10080

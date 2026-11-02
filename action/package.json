@@ -1,0 +1,19 @@
+{
+  "name": "@paid-lock/action",
+  "version": "0.0.0",
+  "private": true,
+  "description": "GitHub Action: check the paid endpoints pinned in paid.lock with an unpaid probe. Never pays, never signs.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "@paid-lock/core": "workspace:*",
+    "@paid-lock/probe": "workspace:*",
+    "paid-lock": "workspace:*"
+  },
+  "devDependencies": {
+    "@paid-lock/mock-seller": "workspace:*"
+  }
+}

@@ -1,0 +1,37 @@
+# Written with AI help. GitHub Action: check the paid endpoints pinned in paid.lock.
+# Probes each endpoint unpaid (never pays, never signs, never loads a key) and fails the job when a
+# seller changed payTo, network, asset, scheme or payment flow, or raised the price above the lock.
+# Needs no secret and only `contents: read`. Code: action/src, bundled to action/dist (checked fresh in CI).
+name: paid-lock verify
+description: Fail CI when a paid endpoint's payment terms drift from paid.lock (unpaid probe; never pays)
+author: Patrick Baur / RUNECLAW
+branding:
+  icon: lock
+  color: gray-dark
+inputs:
+  lockfile:
+    description: Path to paid.lock, relative to the workspace
+    required: false
+    default: paid.lock
+  fail-on:
+    description: needs-ok (default; fail on Blocked and on Needs your OK) or blocked (fail on Blocked only)
+    required: false
+    default: needs-ok
+  sarif:
+    description: Where to write the SARIF 2.1.0 report (relative to the workspace); empty for none
+    required: false
+    default: paid-lock.sarif
+outputs:
+  verdict:
+    description: allowed, blocked or needsOk (the worst endpoint result)
+  allowed:
+    description: Number of endpoints allowed
+  blocked:
+    description: Number of endpoints blocked
+  needs-ok:
+    description: Number of endpoints that need your OK
+  sarif:
+    description: Path of the SARIF report (empty if disabled)
+runs:
+  using: node24
+  main: action/dist/index.mjs

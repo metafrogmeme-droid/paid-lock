@@ -102,3 +102,14 @@ the IANA special-purpose ranges (`net.BlockList`, plus IPv4 inside NAT64 / 6to4 
 `lookup` function that returns exactly that address: no second resolution, so no rebinding window. TLS still verifies
 the certificate against the host name (`servername`). Same limits and behaviour as before; fewer request headers
 (`host`, `accept`, `user-agent`, `connection`). Still no new dependency.
+
+**D-021 The GitHub Action: root `action.yml`, `node24`, one esbuild bundle, no `@actions/*` packages.** `action.yml`
+sits at the repo root (needed for a Marketplace listing later) and runs `action/dist/index.mjs` on the `node24`
+runtime. The source is `action/src`; `scripts/build-action.ts` bundles it with esbuild into one deterministic ESM
+file, committed as Actions require, and CI rebuilds it and fails on any difference (`pnpm check:action-dist`). The
+Action reuses the CLI's `runVerify`, so CLI and Action give identical verdicts. It writes the job summary, outputs
+and annotations through the runner's files and workflow commands directly instead of `@actions/core`, which keeps the
+bundle's dependencies to zod and @noble/hashes (both already allowlisted). Seller text is escaped for Markdown/HTML
+and for workflow commands. SARIF 2.1.0 results point at the endpoint's line in `paid.lock`, with stable fingerprints.
+The bundle is skipped by copy-lint and Semgrep (generated from scanned sources plus third-party code) but is
+included in the never-pays scan and the dependency allowlist (`@paid-lock/action` is a guarded package).

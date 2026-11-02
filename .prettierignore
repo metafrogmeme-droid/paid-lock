@@ -4,3 +4,4 @@ coverage/
 dist/
 .semgrep/paid-lock.ts
 schemas/
+action/dist/

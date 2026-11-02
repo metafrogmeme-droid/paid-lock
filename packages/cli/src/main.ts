@@ -10,23 +10,16 @@ import {
   MAX_TOLERANCE_BPS,
   newEndpoint,
   normalizeTerms,
-  notInLock,
-  summarize,
-  verifySamples,
   verifyUnpinned,
   type EndpointResult,
-  type Lock,
-  type Method,
-  type ObservedTerms,
 } from "@paid-lock/core";
 import { probe, ProbeUrlError } from "@paid-lock/probe";
 import { EXPLAIN } from "./explain.ts";
 import { CliError, lockExists, readLock, writeLock } from "./files.ts";
 import { renderResult, renderSummary } from "./render.ts";
+import { checkEndpoint as check, EXIT, isFailOn, methodOf, runVerify, urlOf, type ExitCode } from "./run-verify.ts";
 
-/** Exit codes (documented in docs/SPEC.md): allowed 0, blocked 1, needs your OK 2, tool error 3. */
-export const EXIT = { allowed: 0, blocked: 1, needsOk: 2, toolError: 3 } as const;
-export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
+export { EXIT, type ExitCode } from "./run-verify.ts";
 
 export interface Io {
   out: (text: string) => void;
@@ -71,26 +64,6 @@ function parseTolerance(value: string | undefined): number {
   if (!Number.isInteger(pct) || pct * 100 > MAX_TOLERANCE_BPS)
     throw new CliError("--tolerance must be a whole percentage from 0 to 100");
   return pct * 100;
-}
-
-function methodOf(key: string): Method {
-  return key.startsWith("POST ") ? "POST" : "GET";
-}
-
-/** Probe an endpoint and return the verify result plus the first sample's terms (if readable). */
-async function check(
-  lock: Lock,
-  method: Method,
-  url: string,
-): Promise<{ key: string; result: EndpointResult; terms?: ObservedTerms }> {
-  const key = endpointKey(method, url);
-  // An endpoint that is not pinned is never probed: it is Blocked as NOT_IN_LOCK right away.
-  if (!Object.hasOwn(lock.endpoints, key)) return { key, result: notInLock(key) };
-  const allowPrivateNetwork = lock.endpoints[key]?.policy.allowPrivateNetwork === true;
-  const { samples } = await probe(url, { method, allowPrivateNetwork });
-  const result = verifySamples(lock, key, samples);
-  const first = samples[0];
-  return first?.kind === "terms" ? { key, result, terms: first.terms } : { key, result };
 }
 
 export async function main(argv: readonly string[], io: Io): Promise<ExitCode> {
@@ -183,22 +156,17 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     case "verify":
     case "diff": {
       const failOn = values["fail-on"];
-      if (failOn !== "needs-ok" && failOn !== "blocked") throw new CliError("--fail-on must be needs-ok or blocked");
+      if (!isFailOn(failOn)) throw new CliError("--fail-on must be needs-ok or blocked");
       const lock = readLock(path);
-      const keys = target === undefined ? Object.keys(lock.endpoints).sort() : [endpointKey("GET", target)];
-      const results: EndpointResult[] = [];
-      for (const key of keys) {
-        const url = key.slice(key.indexOf(" ") + 1);
-        results.push((await check(lock, methodOf(key), url)).result);
-      }
-      const summary = summarize(results);
+      const { results, summary, exitCode } = await runVerify(lock, {
+        failOn,
+        ...(target === undefined ? {} : { target }),
+      });
       print(results.map((r) => renderResult(r, command === "diff")).join("") + renderSummary(summary), {
         summary,
         results,
       });
-      if (command === "diff") return EXIT.allowed;
-      if (summary.verdict === "needsOk" && failOn === "blocked") return EXIT.allowed;
-      return exitFor(summary.verdict);
+      return command === "diff" ? EXIT.allowed : exitCode;
     }
 
     case "update": {
@@ -209,7 +177,7 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         if (!Object.hasOwn(lock.endpoints, k)) throw new CliError(`${k} is not in paid.lock (use paid-lock add)`);
       let worst: ExitCode = EXIT.allowed;
       for (const key of keys) {
-        const url = key.slice(key.indexOf(" ") + 1);
+        const url = urlOf(key);
         const { result, terms } = await check(lock, methodOf(key), url);
         const codes = [...new Set(result.findings.map((f) => f.code))];
         const unacceptable = codes.filter((c) =>
