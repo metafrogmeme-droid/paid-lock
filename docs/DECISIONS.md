@@ -120,3 +120,19 @@ GitHub's 65,536-character limit). It talks only to `GITHUB_API_URL` with the job
 redirects are refused. It is best effort: a refusal (for example a read-only token on a fork PR) is a warning and
 never changes the verdict or the exit code. Enabling it needs `pull-requests: write`; the default stays
 `contents: read`. No `@actions/*` package (plain `fetch`).
+
+**D-023 Runtime library: the lock is passed in, two entry points, the whole 402 is checked.** `@paid-lock/runtime`
+exports `loadLock(path = "paid.lock")` and `checkAgainstLock(lock, method, url, paymentRequired)`, which returns
+`{ verdict, code, detail, findings, notes }`. The brief's signature had no lock argument; passing the lock keeps the
+check pure (no file read or global state per payment, easy to test) and lets a host load it once at start-up.
+`paymentRequired` is what an x402 client has already decoded (the v2 header object or the v1 body); it goes through
+the same guards as the raw forms (serialised to JSON text, then depth, size, duplicate-key and schema checks;
+`parsePaymentRequired` in `packages/protocols`). `checkResponse(lock, method, url, { status, headers, body })` takes a
+raw unpaid response instead, for fetch wrappers. Both call the core's `verifyEndpoint`, the same function as the CLI
+and the Action; a contract test runs the shared fixture set (the demo's named changes) through the CLI and the
+runtime and requires identical verdicts, reason codes, verdict lines and notes. The runtime checks the whole 402, as
+CI does: one sample, since a client pays from one response (the CLI's two-sample check needs a second request).
+Narrowing to the option the client selected is the hook adapter's job (M5 part 2). `code` is the first finding with
+the worst verdict, so a host can branch on a stable code and show `detail`, which is always one of the three verdict
+strings. The check never throws: an unreadable value, an unknown method or a URL that cannot be normalised is
+Blocked. `loadLock` checks the size before reading, validates with `parseLock` and deep-freezes the result.

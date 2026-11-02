@@ -7,7 +7,8 @@ pins, per endpoint, the `payTo`, network (CAIP-2), asset, scheme, maximum amount
 The `paid-lock` CLI reads each endpoint's 402 terms **without paying** and a GitHub Action fails CI when a seller
 changes where the money goes or raises the price above your lock.
 
-> **Status: M3 in progress.** Nothing is published to npm or the Marketplace yet; run it from this repo.
+> **Status: MVP (CLI + GitHub Action) done; M5 (runtime library) in progress.** Nothing is published to npm or the
+> Marketplace yet; run it from this repo.
 
 ## Quick start (from this repo)
 
@@ -52,6 +53,21 @@ only `contents: read`, and never pays: it sends plain unpaid requests, refuses p
 addresses unless the lock entry opts in, and never follows redirects.
 
 paid-lock never pays, never signs and never loads a key.
+
+## Runtime check (M5, in progress)
+
+`@paid-lock/runtime` applies the same lock at pay time, so a client hook can refuse changed terms before it pays.
+It reads terms only; it never pays, signs or loads a key.
+
+```ts
+import { checkAgainstLock, loadLock } from "@paid-lock/runtime";
+
+const lock = await loadLock(); // ./paid.lock, validated and frozen
+const r = checkAgainstLock(lock, "GET", url, paymentRequired); // the decoded 402 terms
+if (r.verdict !== "allowed") throw new Error(r.detail); // "Blocked by your rule: payTo changed since paid.lock"
+```
+
+Details: [docs/SPEC.md](docs/SPEC.md#runtime-library).
 
 ## Develop
 

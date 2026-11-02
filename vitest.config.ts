@@ -10,6 +10,7 @@ export default defineConfig({
       "@paid-lock/core": src("packages/core"),
       "@paid-lock/protocols": src("packages/protocols"),
       "@paid-lock/probe": src("packages/probe"),
+      "@paid-lock/runtime": src("packages/runtime"),
       "@paid-lock/mock-seller": src("fixtures/mock-seller"),
       "paid-lock": src("packages/cli"),
     },

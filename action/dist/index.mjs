@@ -21061,7 +21061,10 @@ function parseX402V2Header(header) {
   if (!decoded.ok) return decoded;
   const json2 = parseJsonGuarded(decoded.text, MAX_HEADER_BYTES);
   if (!json2.ok) return json2;
-  const r = PaymentRequiredV2.safeParse(json2.value);
+  return fromV2Json(json2.value);
+}
+function fromV2Json(value) {
+  const r = PaymentRequiredV2.safeParse(value);
   if (!r.success) return zodReason("x402 v2", r.error);
   const options = [];
   for (const req of r.data.accepts) {
@@ -21097,7 +21100,10 @@ function parseX402V2Header(header) {
 function parseX402V1Body(body2) {
   const json2 = parseJsonGuarded(body2, MAX_BODY_BYTES);
   if (!json2.ok) return json2;
-  const r = PaymentRequiredV1.safeParse(json2.value);
+  return fromV1Json(json2.value);
+}
+function fromV1Json(value) {
+  const r = PaymentRequiredV1.safeParse(value);
   if (!r.success) return zodReason("x402 v1", r.error);
   const resources = new Set(r.data.accepts.map((a) => a.resource));
   const [resourceUrl] = resources;

@@ -1,0 +1,32 @@
+{
+  "name": "@paid-lock/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Check a 402 against paid.lock at pay time, so a client hook can refuse changed terms. Never pays.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "exports": {
+    ".": {
+      "@paid-lock/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/.tsbuildinfo"
+  ],
+  "dependencies": {
+    "@paid-lock/core": "workspace:*",
+    "@paid-lock/protocols": "workspace:*"
+  },
+  "devDependencies": {
+    "@paid-lock/mock-seller": "workspace:*",
+    "@paid-lock/probe": "workspace:*",
+    "paid-lock": "workspace:*"
+  }
+}
