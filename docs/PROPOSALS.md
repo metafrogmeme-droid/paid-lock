@@ -73,3 +73,15 @@ annotation on the exact entry. **Cost** +0.5 d in M4. **Risk** low.
 **Problem.** Some sellers may hand out a fresh deposit address per request; the 2-sample check then always
 reports instability. **Idea.** Report it once as "Needs your OK: payTo differs between identical requests"
 and let the owner pin an explicit `allow` list of addresses for that endpoint; never a wildcard. **Cost** 0.5 d (M3).
+
+## Follow-ups (deferred by the owner on 2 Nov 2026)
+
+Not scope until the owner picks them up:
+
+- **POST fixture bodies in the lock.** `add --method POST` probes without a body today. Storing a fixture body per
+  endpoint needs a schema field (and a size limit) so `verify` can send the same body.
+- **Allowlisted auth header.** Probe endpoints that require an API key before they answer 402: an allowlisted header
+  name in config, the value read from an environment variable, never written to the lock, logs or reports
+  (CLAUDE.md §3 item 4; default off).
+- **Role-constant payTo at `add`.** A `payTo` that is a role constant (for example `"merchant"`, allowed by x402 v2)
+  pins nothing; report it as "Needs your OK" when adding (from P-01).

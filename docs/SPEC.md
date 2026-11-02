@@ -17,7 +17,8 @@ probe is a plain unpaid request (see THREAT_MODEL.md).
 | `explain <code>`         | Prints the verdict line and an explanation for a reason code.                                                                                                                                                                                                                                                                                                                                                   |
 
 Options: `--lockfile <path>` (default `paid.lock`), `--method GET|POST` (add), `--tolerance <n%>` (add, whole
-percentage 0-100, default 0), `--fail-on needs-ok|blocked` (verify, default `needs-ok`), `--accept-change <CODE>`
+percentage 0-100, default 0), `--allow-private-network` (add: allow a private, link-local or loopback address and
+record that in the endpoint's policy; refused by default), `--fail-on needs-ok|blocked` (verify, default `needs-ok`), `--accept-change <CODE>`
 (update, repeatable), `--json` (all commands).
 
 ## Exit codes
@@ -54,3 +55,13 @@ a price drop) change no verdict.
 | `OPTION_REMOVED`           | Needs your OK |
 
 `policy.tighten` can turn any "Needs your OK" code into Blocked for one endpoint; nothing can loosen a Blocked code.
+
+## Network targets
+
+Before any request the probe checks where it would connect. Private (10/8, 172.16/12, 192.168/16, 100.64/10,
+fc00::/7), link-local (169.254/16, fe80::/10), loopback (127/8, ::1) and other special-purpose addresses are refused
+unless the endpoint's policy has `"allowPrivateNetwork": true`; IPv4 written inside IPv6 (mapped, NAT64, 6to4) is
+judged by its IPv4 address. A host name is resolved once per request, every answer must pass, and the connection
+goes to exactly the address that was checked, so a second DNS answer cannot redirect it (DNS rebinding). A refused
+target is a tool error (exit 3) with the reason; nothing is sent. Endpoints that are not in `paid.lock` are never
+probed (`NOT_IN_LOCK`).

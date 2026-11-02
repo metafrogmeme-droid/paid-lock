@@ -10,7 +10,8 @@ no key, no payment. CI runs it on every PR.
 
 1. Starts the mock seller with three x402 v2 endpoints: `/forecast` (10000), `/quote` (25000) and `/news` (5000).
    All three use fake `payTo` test addresses and Base Sepolia (testnet) USDC.
-2. In a temporary directory, runs the built `paid-lock` binary: `init`, then `add` for each endpoint.
+2. In a temporary directory, runs the built `paid-lock` binary: `init`, then `add --allow-private-network` for each
+   endpoint (the mock seller is on loopback, which is refused unless the lock entry opts in).
 3. Commits `paid.lock` to a throwaway git repository.
 4. Switches the mock seller's scenario for each step below and runs `paid-lock verify --json`. It checks the exit code
    and the reason codes.

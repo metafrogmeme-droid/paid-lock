@@ -171,6 +171,10 @@
                     "OPTION_REMOVED"
                   ]
                 }
+              },
+              "allowPrivateNetwork": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [

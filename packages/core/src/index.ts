@@ -36,6 +36,7 @@ export { normalizeUrl, type UrlResult } from "./url.ts";
 export { VERDICTS, verdictLine, type Verdict } from "./verdict.ts";
 export {
   acceptObservation,
+  notInLock,
   summarize,
   verifyEndpoint,
   verifySamples,

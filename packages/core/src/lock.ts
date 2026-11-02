@@ -50,6 +50,11 @@ const ObservedSchema = z.strictObject({
 const PolicySchema = z.strictObject({
   options: z.record(z.string(), z.strictObject({ maxAmount: Amount })),
   tighten: z.array(z.enum(TIGHTENABLE as [string, ...string[]])).optional(),
+  /**
+   * Owner opt-in (decision of 2 Nov 2026): allow probing this endpoint on a private, link-local or
+   * loopback address. Only `true` is valid; remove the key to refuse again.
+   */
+  allowPrivateNetwork: z.literal(true).optional(),
 });
 
 const EndpointSchema = z.strictObject({ observed: ObservedSchema, policy: PolicySchema });
@@ -123,13 +128,17 @@ export function observedFrom(t: ObservedTerms): LockedObserved {
 }
 
 /** A new endpoint entry (`paid-lock add`): policy maxAmount = observed amount + tolerance. */
-export function newEndpoint(t: ObservedTerms, opts: { toleranceBps: number }): LockedEndpoint {
+export function newEndpoint(
+  t: ObservedTerms,
+  opts: { toleranceBps: number; allowPrivateNetwork?: boolean },
+): LockedEndpoint {
   return {
     observed: observedFrom(t),
     policy: {
       options: Object.fromEntries(
         t.options.map((o) => [optionId(o), { maxAmount: applyTolerance(o.amount, opts.toleranceBps) }]),
       ),
+      ...(opts.allowPrivateNetwork === true ? { allowPrivateNetwork: true as const } : {}),
     },
   };
 }

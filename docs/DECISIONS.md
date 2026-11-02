@@ -93,3 +93,12 @@ followed, reported without the Location value), `AbortSignal.timeout` covering h
 cap, no cookie jar (Node's fetch has none), only `accept` / `user-agent` (+ `content-type` for POST) set. No
 `cache` option: it makes fetch add `cache-control` / `pragma` headers, and Node's fetch does not cache anyway. A
 test asserts the exact set of request header names the mock seller receives.
+
+**D-020 The probe uses `node:http` / `node:https` with a pinned DNS lookup (replaces the transport in D-019).**
+Owner decision of 2 Nov 2026: refuse private, link-local and loopback targets unless the lock entry opts in, with
+tests for IPv4, IPv6 and DNS rebinding. Node's `fetch` offers no way to choose the address it connects to without the
+`undici` package, so the probe now resolves the name itself (`dns.lookup`, all answers), checks every answer against
+the IANA special-purpose ranges (`net.BlockList`, plus IPv4 inside NAT64 / 6to4 / mapped IPv6), and hands the request a
+`lookup` function that returns exactly that address: no second resolution, so no rebinding window. TLS still verifies
+the certificate against the host name (`servername`). Same limits and behaviour as before; fewer request headers
+(`host`, `accept`, `user-agent`, `connection`). Still no new dependency.
