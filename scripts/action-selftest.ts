@@ -23,6 +23,8 @@ function fail(message: string): never {
 
 async function stats(): Promise<{ paymentHeadersSeen: number } | undefined> {
   try {
+    // Plain http on purpose: the mock seller runs on loopback inside the CI job.
+    // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
     return (await (await fetch(`${origin}/__mock/stats`)).json()) as { paymentHeadersSeen: number };
   } catch {
     return undefined;

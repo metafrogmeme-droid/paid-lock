@@ -31,7 +31,7 @@ inputs:
     default: ${{ github.token }}
 outputs:
   verdict:
-    description: allowed, blocked or needsOk (the worst endpoint result)
+    description: allowed, blocked or needsOk (the worst endpoint result), or error when the check could not run
   allowed:
     description: Number of endpoints allowed
   blocked:

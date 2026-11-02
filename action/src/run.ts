@@ -66,6 +66,8 @@ export async function runAction(env: Env, workspace: string, log: (line: string)
     return run.exitCode;
   } catch (e) {
     if (e instanceof CliError || e instanceof ProbeUrlError || e instanceof RangeError) {
+      const outputFile = env["GITHUB_OUTPUT"];
+      if (outputFile) appendFileSync(outputFile, "verdict=error\n");
       log(`::error::paid-lock: ${e.message.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A")}`);
       return EXIT.toolError;
     }
