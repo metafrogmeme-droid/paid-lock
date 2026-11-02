@@ -4,13 +4,20 @@
 // allowlist; known wallet / signing / payment-client libraries get a specific message.
 
 /** Guarded workspace packages. `paid-lock` is the CLI; the action joins in M4, runtime in M5. */
-export const GUARDED = ["@paid-lock/core", "@paid-lock/protocols", "@paid-lock/probe", "paid-lock"] as const;
+export const GUARDED = [
+  "@paid-lock/core",
+  "@paid-lock/protocols",
+  "@paid-lock/probe",
+  "paid-lock",
+  "@paid-lock/action",
+] as const;
 
 /** Allowed production dependencies of guarded packages (exact names). Grows only by reviewed PR. */
 export const ALLOWED = new Set<string>([
   "@paid-lock/core",
   "@paid-lock/protocols",
   "@paid-lock/probe",
+  "paid-lock",
   // SHA-256 and Keccak-256 for integrity strings and EIP-55: pure JS, audited, no dependencies (D-016).
   "@noble/hashes",
   // Runtime validation of every external byte: lock files, 402 terms (D-005). No dependencies.

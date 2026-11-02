@@ -11,18 +11,25 @@ export default defineConfig({
       "@paid-lock/protocols": src("packages/protocols"),
       "@paid-lock/probe": src("packages/probe"),
       "@paid-lock/mock-seller": src("fixtures/mock-seller"),
+      "paid-lock": src("packages/cli"),
     },
   },
   test: {
-    include: ["packages/*/src/**/*.test.ts", "fixtures/*/test/**/*.test.ts", "tests/**/*.test.ts"],
+    include: [
+      "packages/*/src/**/*.test.ts",
+      "fixtures/*/test/**/*.test.ts",
+      "tests/**/*.test.ts",
+      "action/src/**/*.test.ts",
+    ],
     coverage: {
       provider: "v8",
-      include: ["packages/*/src/**/*.ts", "fixtures/*/src/**/*.ts", "scripts/lib/**/*.ts"],
+      include: ["packages/*/src/**/*.ts", "fixtures/*/src/**/*.ts", "scripts/lib/**/*.ts", "action/src/**/*.ts"],
       exclude: [
         "**/*.test.ts",
         "**/__fixtures__/**",
         "packages/cli/src/bin.ts",
         "fixtures/mock-seller/src/main.ts",
+        "action/src/index.ts",
         "scripts/lib/files.ts",
       ],
       reporter: [["text", { skipFull: false }], "json-summary"],

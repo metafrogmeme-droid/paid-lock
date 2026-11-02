@@ -27,6 +27,8 @@ export interface Finding {
 }
 
 export function isScanned(file: string): boolean {
+  // The bundled Action is generated from scanned sources plus third-party code (CLAUDE.md §5 rule 6).
+  if (file.startsWith("action/dist/")) return false;
   return (TEXT_EXT.test(file) || file.startsWith(".githooks/")) && !SKIP_FILES.has(file);
 }
 
