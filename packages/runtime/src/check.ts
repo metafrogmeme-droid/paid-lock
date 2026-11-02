@@ -14,8 +14,11 @@ import {
   type Observation,
   type ReasonCode,
   type Verdict,
+  verdictLine,
 } from "@paid-lock/core";
 import { observe402, parsePaymentRequired, type UnpaidResponse } from "@paid-lock/protocols";
+
+const RANK: Record<Verdict, number> = { allowed: 0, needsOk: 1, blocked: 2 };
 
 export interface LockCheck {
   verdict: Verdict;
@@ -44,6 +47,18 @@ function toCheck(r: EndpointResult): LockCheck {
   return { verdict: r.verdict, code: reason?.code ?? "OK", detail: r.line, findings: r.findings, notes: r.notes };
 }
 
+/** The same result without some findings: verdict, code and line recomputed from the rest. */
+function without(r: EndpointResult, drop: ReasonCode): EndpointResult {
+  const findings = r.findings.filter((f) => f.code !== drop);
+  const verdict = findings.reduce<Verdict>((v, f) => (RANK[f.verdict] > RANK[v] ? f.verdict : v), "allowed");
+  const line = findings.find((f) => f.verdict === verdict)?.line ?? verdictLine("allowed");
+  return { ...r, findings, verdict, line };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function check(lock: Lock, method: string, url: string, observe: () => Observation): LockCheck {
   const key = keyOf(method, url);
   if (key === undefined || !Object.hasOwn(lock.endpoints, key)) return toCheck(notInLock(`${method} ${url}`));
@@ -59,6 +74,38 @@ export function checkAgainstLock(lock: Lock, method: string, url: string, paymen
     const parsed = parsePaymentRequired(paymentRequired);
     return parsed.ok ? { kind: "terms", terms: parsed.terms } : { kind: "unreadable", reason: parsed.reason };
   });
+}
+
+/**
+ * Check the one option a client selected to pay (it may differ from what the seller listed: client
+ * policies can filter or transform requirements). The 402 is checked as if it offered only that
+ * option; pinned options that were not selected are not reported as removed. Never throws.
+ */
+export function checkSelected(
+  lock: Lock,
+  method: string,
+  url: string,
+  paymentRequired: unknown,
+  selected: unknown,
+): LockCheck {
+  const key = keyOf(method, url);
+  if (key === undefined || !Object.hasOwn(lock.endpoints, key)) return toCheck(notInLock(`${method} ${url}`));
+  const parsed =
+    isPlainObject(paymentRequired) && isPlainObject(selected)
+      ? parsePaymentRequired({ ...paymentRequired, accepts: [selected] })
+      : ({ ok: false, reason: "selected payment option is not a JSON object" } as const);
+  const obs: Observation = parsed.ok
+    ? { kind: "terms", terms: parsed.terms }
+    : { kind: "unreadable", reason: parsed.reason };
+  return toCheck(without(verifyEndpoint(lock, key, obs), "OPTION_REMOVED"));
+}
+
+/** Failure threshold, as the CLI's --fail-on: "needs-ok" (default) pays only on Allowed. */
+export type FailOn = "needs-ok" | "blocked";
+
+/** Whether a check lets a payment go ahead. Default: only Allowed. "blocked" also lets Needs your OK through. */
+export function allows(check: Pick<LockCheck, "verdict">, failOn: FailOn = "needs-ok"): boolean {
+  return check.verdict === "allowed" || (check.verdict === "needsOk" && failOn === "blocked");
 }
 
 /** Check a raw unpaid HTTP response (status, headers in any case, body text). Never throws. */

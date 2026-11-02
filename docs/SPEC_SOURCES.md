@@ -26,6 +26,9 @@ Repository `x402-foundation/x402`, branch `main`, commit **`e208bd39030be35a0f80
 | `typescript/packages/mechanisms/evm/src/constants.ts` `EVM_NETWORK_CHAIN_ID_MAP` | v1 EVM network names → chain ids, used for the v1 → CAIP-2 table (`packages/protocols/src/networks.ts`). |
 | `typescript/packages/mechanisms/svm/src/constants.ts` `V1_TO_V2_NETWORK_MAP` | v1 Solana network names → CAIP-2. |
 | `specs/transports-v2/http.md` example header | Used verbatim as a conformance fixture in `packages/protocols/src/x402.test.ts`. |
+| `typescript/packages/core/src/client/x402Client.ts` | `PaymentCreationContext` (`paymentRequired`, `selectedRequirements`), `onBeforePaymentCreation` and its `{ abort: true, reason }` result: the x402 adapter's pay-time hook (D-024). |
+| `typescript/packages/core/src/http/x402HTTPClient.ts` | `PaymentRequiredContext` (`paymentRequired`, `requestUrl`), `onPaymentRequired`: where the adapter learns the request URL. |
+| `typescript/packages/http/fetch/src/index.ts` | `wrapFetchWithPayment`: order of the hooks, and `requestUrl = response.url \|\| request.url`. |
 
 Parser input limits (CLAUDE.md §3 item 3): header ≤ 128 KiB, body ≤ 1 MiB, JSON depth ≤ 64, at most 64 `accepts`
 entries, strict canonical Base64, duplicate JSON object keys refused (parsers disagree on which value wins).
