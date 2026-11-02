@@ -121,7 +121,8 @@ redirects are refused. It is best effort: a refusal (for example a read-only tok
 never changes the verdict or the exit code. Enabling it needs `pull-requests: write`; the default stays
 `contents: read`. No `@actions/*` package (plain `fetch`).
 
-**D-023 Runtime library: the lock is passed in, two entry points, the whole 402 is checked.** `@paid-lock/runtime`
+**D-023 Runtime library: the lock is passed in, two entry points, the whole 402 is checked.** Approved by the owner
+on 2 Nov 2026; CLAUDE.md §1 and §3 item 9 updated to match. `@paid-lock/runtime`
 exports `loadLock(path = "paid.lock")` and `checkAgainstLock(lock, method, url, paymentRequired)`, which returns
 `{ verdict, code, detail, findings, notes }`. The brief's signature had no lock argument; passing the lock keeps the
 check pure (no file read or global state per payment, easy to test) and lets a host load it once at start-up.
