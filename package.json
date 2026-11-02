@@ -26,7 +26,7 @@
     "gen:schema": "node scripts/gen-lock-schema.ts",
     "demo": "pnpm build && node scripts/demo.ts",
     "build:action": "node scripts/build-action.ts",
-    "check:action-dist": "node scripts/build-action.ts && git diff --exit-code -- action/dist"
+    "check:action-dist": "node scripts/build-action.ts && git ls-files --error-unmatch action/dist/index.mjs >/dev/null && git diff --exit-code -- action/dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

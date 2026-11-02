@@ -124,7 +124,7 @@ jobs:
               variant: unchanged,
               failOn: needs-ok,
               outcome: failure,
-              verdict: "",
+              verdict: error,
               lockfile: .ci/action-selftest/missing.lock,
             }
     steps:
