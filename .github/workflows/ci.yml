@@ -90,6 +90,97 @@ jobs:
       - name: Dependency audit
         run: pnpm audit --audit-level low
 
+  action-selftest:
+    name: action self-test (${{ matrix.case }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { case: unchanged, variant: unchanged, failOn: needs-ok, outcome: success, verdict: allowed }
+          - { case: payTo swapped, variant: payto-swapped, failOn: needs-ok, outcome: failure, verdict: blocked }
+          - { case: network swapped, variant: network-swapped, failOn: needs-ok, outcome: failure, verdict: blocked }
+          - { case: price x3, variant: price-x3, failOn: needs-ok, outcome: failure, verdict: blocked }
+          - { case: price halved, variant: price-half, failOn: needs-ok, outcome: success, verdict: allowed }
+          - {
+              case: extra.version changed,
+              variant: extra-version,
+              failOn: needs-ok,
+              outcome: failure,
+              verdict: needsOk,
+            }
+          - {
+              case: extra.version changed with fail-on blocked,
+              variant: extra-version,
+              failOn: blocked,
+              outcome: success,
+              verdict: needsOk,
+            }
+          - { case: 200 unpaid, variant: unpaid-200, failOn: needs-ok, outcome: failure, verdict: needsOk }
+          - { case: garbage header, variant: garbage-header, failOn: needs-ok, outcome: failure, verdict: blocked }
+          - {
+              case: missing lock (tool error),
+              variant: unchanged,
+              failOn: needs-ok,
+              outcome: failure,
+              verdict: "",
+              lockfile: .ci/action-selftest/missing.lock,
+            }
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Set up pnpm (version from package.json "packageManager")
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Pin /forecast of the mock seller (loopback, opt-in recorded in the lock)
+        run: node scripts/action-selftest.ts setup
+
+      - name: Switch the mock seller to the case under test
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: node scripts/action-selftest.ts serve "$VARIANT"
+
+      - name: Run the paid-lock Action from this repository
+        id: paidlock
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: ${{ matrix.lockfile || '.ci/action-selftest/paid.lock' }}
+          fail-on: ${{ matrix.failOn }}
+          sarif: .ci/action-selftest/paid-lock.sarif
+
+      - name: Check the outcome and the verdict output
+        env:
+          OUTCOME: ${{ steps.paidlock.outcome }}
+          VERDICT: ${{ steps.paidlock.outputs.verdict }}
+          WANT_OUTCOME: ${{ matrix.outcome }}
+          WANT_VERDICT: ${{ matrix.verdict }}
+        run: |
+          echo "outcome=$OUTCOME (want $WANT_OUTCOME), verdict=$VERDICT (want $WANT_VERDICT)"
+          test "$OUTCOME" = "$WANT_OUTCOME"
+          test "$VERDICT" = "$WANT_VERDICT"
+
+      - name: Stop the mock seller (fails if it saw any payment header)
+        if: always()
+        run: node scripts/action-selftest.ts stop
+
   test-matrix:
     name: tests (node ${{ matrix.node }})
     runs-on: ubuntu-24.04
@@ -163,8 +254,8 @@ jobs:
           tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP/bin" actionlint
           echo "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
 
-      - name: actionlint
-        run: actionlint -color
+      - name: actionlint (workflows and the example workflows in docs/examples)
+        run: actionlint -color .github/workflows/*.yml docs/examples/*.yml
 
       - name: zizmor ${{ env.ZIZMOR_VERSION }}
         env:

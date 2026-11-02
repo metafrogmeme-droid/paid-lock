@@ -21,6 +21,35 @@ node packages/cli/dist/bin.js verify                                    # 0 allo
 
 Commands, exit codes and reason codes: [docs/SPEC.md](docs/SPEC.md).
 
+## GitHub Action
+
+Add a workflow that runs the check on every pull request (full examples: [pull request](docs/examples/paid-lock-pull-request.yml),
+[daily schedule](docs/examples/paid-lock-daily.yml)):
+
+```yaml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: metafrogmeme-droid/paid-lock@v0.1.0 # pin to the release commit SHA (not published yet)
+```
+
+| Input      | Default           | Meaning                                                                           |
+| ---------- | ----------------- | --------------------------------------------------------------------------------- |
+| `lockfile` | `paid.lock`       | path inside the workspace                                                         |
+| `fail-on`  | `needs-ok`        | `needs-ok` fails on Blocked and on Needs your OK; `blocked` fails on Blocked only |
+| `sarif`    | `paid-lock.sarif` | where to write SARIF 2.1.0; empty for none                                        |
+
+Outputs: `verdict` (`allowed` / `blocked` / `needsOk`), `allowed`, `blocked`, `needs-ok`, `sarif`. The job summary lists every
+endpoint with its verdict line, and each finding is annotated on its entry in `paid.lock`. The Action needs no secret,
+only `contents: read`, and never pays: it sends plain unpaid requests, refuses private, link-local and loopback
+addresses unless the lock entry opts in, and never follows redirects.
+
 paid-lock never pays, never signs and never loads a key.
 
 ## Develop
