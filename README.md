@@ -44,6 +44,7 @@ jobs:
 | `lockfile` | `paid.lock`       | path inside the workspace                                                         |
 | `fail-on`  | `needs-ok`        | `needs-ok` fails on Blocked and on Needs your OK; `blocked` fails on Blocked only |
 | `sarif`    | `paid-lock.sarif` | where to write SARIF 2.1.0; empty for none                                        |
+| `comment`  | `false`           | `true` keeps one comment with the report on the PR (needs `pull-requests: write`) |
 
 Outputs: `verdict` (`allowed` / `blocked` / `needsOk`), `allowed`, `blocked`, `needs-ok`, `sarif`. The job summary lists every
 endpoint with its verdict line, and each finding is annotated on its entry in `paid.lock`. The Action needs no secret,

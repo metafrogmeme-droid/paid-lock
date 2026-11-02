@@ -118,6 +118,20 @@ describe("runAction against the mock seller", () => {
     expect(await runAction(env(), dir, () => undefined)).toBe(3);
   });
 
+  it("rejects a comment input that is not true or false", async () => {
+    const c = capture();
+    expect(await runAction(env({ INPUT_COMMENT: "yes" }), dir, c.log)).toBe(3);
+    expect(c.lines.join("\n")).toContain("comment must be true or false");
+  });
+
+  it("with comment: true outside a pull request, skips the comment and keeps the verdict", async () => {
+    const c = capture();
+    expect(
+      await runAction(env({ INPUT_COMMENT: "true", "INPUT_GITHUB-TOKEN": "t", GITHUB_EVENT_NAME: "push" }), dir, c.log),
+    ).toBe(0);
+    expect(c.lines.join("\n")).toContain("::notice::paid-lock: no PR comment");
+  });
+
   it("refuses a lock file outside the workspace", async () => {
     const c = capture();
     expect(await runAction(env({ INPUT_LOCKFILE: "../../etc/passwd" }), dir, c.log)).toBe(3);

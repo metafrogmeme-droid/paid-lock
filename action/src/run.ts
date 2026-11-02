@@ -5,6 +5,7 @@ import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { ProbeUrlError } from "@paid-lock/probe";
 import { CliError, EXIT, isFailOn, readLock, runVerify, VERSION } from "paid-lock";
+import { postStickyComment } from "./comment.ts";
 import { renderAnnotations, renderSarif, renderSummaryMarkdown } from "./render.ts";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -27,7 +28,9 @@ export async function runAction(env: Env, workspace: string, log: (line: string)
     const lockfile = input(env, "lockfile", "paid.lock");
     const failOn = input(env, "fail-on", "needs-ok");
     const sarifPath = input(env, "sarif", "paid-lock.sarif");
+    const comment = input(env, "comment", "false");
     if (!isFailOn(failOn)) throw new CliError("fail-on must be needs-ok or blocked");
+    if (comment !== "true" && comment !== "false") throw new CliError("comment must be true or false");
     const lockPath = inWorkspace(workspace, lockfile);
     const lock = readLock(lockPath);
     const lockText = readFileSync(lockPath, "utf8");
@@ -43,8 +46,11 @@ export async function runAction(env: Env, workspace: string, log: (line: string)
     log(`${String(allowed)} allowed, ${String(blocked)} blocked, ${String(needsOk)} needed your OK`);
     for (const a of renderAnnotations(run.results, lockfile, lockText)) log(a);
 
+    const markdown = renderSummaryMarkdown(run.results, run.summary, lockfile);
     const summaryFile = env["GITHUB_STEP_SUMMARY"];
-    if (summaryFile) appendFileSync(summaryFile, renderSummaryMarkdown(run.results, run.summary, lockfile));
+    if (summaryFile) appendFileSync(summaryFile, markdown);
+    // Optional, off by default; best effort: never changes the verdict.
+    if (comment === "true") await postStickyComment(env, input(env, "github-token", ""), markdown, log);
     if (sarifPath !== "")
       writeFileSync(
         inWorkspace(workspace, sarifPath),

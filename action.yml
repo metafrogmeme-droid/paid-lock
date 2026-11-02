@@ -21,6 +21,14 @@ inputs:
     description: Where to write the SARIF 2.1.0 report (relative to the workspace); empty for none
     required: false
     default: paid-lock.sarif
+  comment:
+    description: true to keep one comment with the report on the pull request (needs pull-requests write); default false
+    required: false
+    default: "false"
+  github-token:
+    description: Token used only to post the optional PR comment
+    required: false
+    default: ${{ github.token }}
 outputs:
   verdict:
     description: allowed, blocked or needsOk (the worst endpoint result)
