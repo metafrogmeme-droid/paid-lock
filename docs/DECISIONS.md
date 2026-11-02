@@ -121,7 +121,8 @@ redirects are refused. It is best effort: a refusal (for example a read-only tok
 never changes the verdict or the exit code. Enabling it needs `pull-requests: write`; the default stays
 `contents: read`. No `@actions/*` package (plain `fetch`).
 
-**D-023 Runtime library: the lock is passed in, two entry points, the whole 402 is checked.** `@paid-lock/runtime`
+**D-023 Runtime library: the lock is passed in, two entry points, the whole 402 is checked.** Approved by the owner
+on 2 Nov 2026; CLAUDE.md §1 and §3 item 9 updated to match. `@paid-lock/runtime`
 exports `loadLock(path = "paid.lock")` and `checkAgainstLock(lock, method, url, paymentRequired)`, which returns
 `{ verdict, code, detail, findings, notes }`. The brief's signature had no lock argument; passing the lock keeps the
 check pure (no file read or global state per payment, easy to test) and lets a host load it once at start-up.
@@ -136,3 +137,29 @@ Narrowing to the option the client selected is the hook adapter's job (M5 part 2
 the worst verdict, so a host can branch on a stable code and show `detail`, which is always one of the three verdict
 strings. The check never throws: an unreadable value, an unknown method or a URL that cannot be normalised is
 Blocked. `loadLock` checks the size before reading, validates with `parseLock` and deep-freezes the result.
+
+**D-024 x402 client adapter: two hooks, a re-check at pay time, no SDK dependency.** Read from
+`x402-foundation/x402` @ `e208bd3` (`typescript/packages/core/src/client/x402Client.ts`,
+`src/http/x402HTTPClient.ts`, `typescript/packages/http/fetch/src/index.ts`). The before-payment hook
+(`onBeforePaymentCreation({ paymentRequired, selectedRequirements })`, can return `{ abort: true, reason }`) does not
+see the request URL; the HTTP client's `onPaymentRequired({ paymentRequired, requestUrl })` does, but cannot abort.
+Taking the URL from the 402's `resource.url` instead would let an endpoint that is not pinned copy a pinned
+endpoint's terms and get paid under its entry (the payment would authorise a transfer the agent never reviewed for
+that URL). So the adapter records `requestUrl` per 402 object (a `WeakMap`, nothing global) and, in the
+before-payment hook, checks the whole 402 and the selected option (`checkSelected`: client policies may filter or
+transform requirements) against the lock at that moment, then aborts with the worse verdict line unless `allows` says
+yes. Checking again at pay time also catches changes made to the 402 object between the two hooks. A 402 the first
+hook never saw throws, so a wiring mistake stops the payment instead of skipping the check. The adapter uses
+structural types only: the dependency allowlist keeps `@x402/*` packages other than `@x402/core` out of shipped code,
+and the runtime needs none. An integration test that runs the real client (with a stub scheme that never signs)
+against the mock seller is planned as a dev-only test with `@x402/core` **2.29.0**, the version of `e208bd3`. That
+version is younger than the repo's 7-day minimum release age until 4 Nov 2026 18:29 UTC; 2.28.0 has the same hook API
+but depends on zod 3.25.76 (GHSA-mrhx-c7xc-m3w5, high, fixed only in zod >= 4.6.6), which would fail the audit. Rather
+than loosening either control, the test lands once 2.29.0 is old enough.
+
+**D-025 Guard-reach lint.** `pnpm check:guard-reach` (CI, `check` job) parses every adapter in
+`packages/runtime/src/adapters/` with the TypeScript compiler API and fails unless every pay-path hook (names in
+`PAY_PATHS`, today `onBeforePaymentCreation`) calls `checkAgainstLock`, `checkResponse` or `checkSelected`, directly or
+through functions in the same file. A check that is only mentioned, not called, does not count, and an adapter file
+with no known pay path fails, so a new adapter cannot skip the lint by using a new hook name. Idea from the
+`001` repo's guard lint (design only, BUSL-1.1; code written fresh).

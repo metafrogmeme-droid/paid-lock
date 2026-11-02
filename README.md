@@ -59,13 +59,19 @@ paid-lock never pays, never signs and never loads a key.
 `@paid-lock/runtime` applies the same lock at pay time, so a client hook can refuse changed terms before it pays.
 It reads terms only; it never pays, signs or loads a key.
 
-```ts
-import { checkAgainstLock, loadLock } from "@paid-lock/runtime";
+With the official x402 client, two hooks do it (the payment is aborted with the verdict line):
 
-const lock = await loadLock(); // ./paid.lock, validated and frozen
-const r = checkAgainstLock(lock, "GET", url, paymentRequired); // the decoded 402 terms
-if (r.verdict !== "allowed") throw new Error(r.detail); // "Blocked by your rule: payTo changed since paid.lock"
+```ts
+import { installPaidLock, loadLock } from "@paid-lock/runtime";
+
+const http = new x402HTTPClient(client); // client: your x402Client
+installPaidLock({ client, http }, await loadLock()); // ./paid.lock, validated and frozen
+const fetchWithPayment = wrapFetchWithPayment(fetch, http);
+// a changed payTo now fails with "Payment creation aborted: Blocked by your rule: payTo changed since paid.lock"
 ```
+
+Or call the check yourself: `checkAgainstLock(lock, "GET", url, paymentRequired)` returns the verdict, reason code
+and verdict line.
 
 Details: [docs/SPEC.md](docs/SPEC.md#runtime-library).
 

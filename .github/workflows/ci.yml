@@ -37,7 +37,7 @@ env:
 
 jobs:
   check:
-    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, audit, mock seller, demo, action dist)
+    name: check (format, lint, types, tests + coverage, copy-lint, deps, never-pays, guard reach, audit, mock seller, demo, action dist)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -77,6 +77,9 @@ jobs:
 
       - name: Never-pays source scan
         run: pnpm check:never-pays
+
+      - name: Guard reach (every pay path in the runtime adapters calls a paid.lock check)
+        run: pnpm check:guard-reach
 
       - name: Mock seller smoke test (402 + PAYMENT-REQUIRED on loopback, 0 payment headers)
         run: pnpm smoke:mock-seller

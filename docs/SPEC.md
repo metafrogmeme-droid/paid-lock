@@ -70,8 +70,37 @@ the Action (DECISIONS D-023). It never pays, signs or loads a key, and it makes 
 `verdict` is `allowed`, `blocked` or `needsOk`; `code` is the reason code of the first finding with that verdict
 (`OK` when allowed); `detail` is the single verdict line ("Allowed: within your limits", "Blocked by your rule: …",
 "Needs your OK: …"). An endpoint that is not in the lock, a method other than GET or POST, a URL that cannot be read
-and unreadable terms are all Blocked. One response is checked (no second sample at pay time). Which verdicts let a
-payment go ahead is the caller's choice; the hook adapter (M5 part 2) defaults to paying only on `allowed`.
+and unreadable terms are all Blocked. One response is checked (no second sample at pay time).
+
+| Also exported                                                 | Returns / does                                                                                                                                                    |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checkSelected(lock, method, url, paymentRequired, selected)` | Checks the one option the client is about to pay, as if the 402 offered only that option (pinned options not selected are not reported as removed). Never throws. |
+| `allows(check, failOn = "needs-ok")`                          | Whether a check lets a payment go ahead: only Allowed by default; `"blocked"` also lets Needs your OK through (the CLI's `--fail-on`).                            |
+
+### Adapter for the official x402 client
+
+For `@x402/core`'s `x402Client` and `x402HTTPClient` (DECISIONS D-024). The adapter has no dependency on the SDK.
+
+```ts
+import { x402Client, x402HTTPClient } from "@x402/core/client";
+import { wrapFetchWithPayment } from "@x402/fetch";
+import { installPaidLock, loadLock } from "@paid-lock/runtime";
+
+const client = new x402Client(); // register your schemes as usual
+const http = new x402HTTPClient(client);
+installPaidLock({ client, http }, await loadLock());
+const fetchWithPayment = wrapFetchWithPayment(fetch, http); // pass `http`, the client the hooks are on
+```
+
+- `http.onPaymentRequired` records the URL the agent requested for each 402. It is the only x402 hook that sees the
+  URL, and the URL must come from the request, not from the seller's 402.
+- `client.onBeforePaymentCreation` runs right before a payment is created. It checks the whole 402 and the selected
+  option against the lock at that moment, and aborts with the verdict line ("Blocked by your rule: …" or "Needs your
+  OK: …") unless `allows` says yes. The x402 client then throws `Payment creation aborted: <line>`.
+- A 402 that `onPaymentRequired` never saw throws `PaidLockHookError`: the payment stops (fail closed).
+- Options: `method` (default `GET`; the x402 hooks do not carry the request method), `failOn` (default `needs-ok`),
+  `onCheck({ url, check })` for logging. The URL is the one that answered 402 (after redirects, as the fetch wrapper
+  reports it).
 
 ## Network targets
 

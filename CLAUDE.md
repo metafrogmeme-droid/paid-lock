@@ -49,8 +49,8 @@ but for money. A `paid.lock` file committed in the agent's repo pins, per paid e
 - **GitHub Action**: runs `verify` in CI (and on a schedule) and **fails the build when a seller changed
   `payTo`, network, asset or scheme, or raised the price above the lock**. Output is a readable PR comment /
   job summary + SARIF. Updating the lock is a normal, reviewable diff.
-- **Runtime library** (`@paid-lock/runtime`, optional): `checkAgainstLock(url, paymentRequired)` returns one
-  of the three verdicts, so a client hook (Claw Pay's gate, or the official x402 client's before-payment hook)
+- **Runtime library** (`@paid-lock/runtime`, optional): `checkAgainstLock(lock, method, url, paymentRequired)`
+  returns one of the three verdicts, so a client hook (Claw Pay's gate, or the official x402 client's before-payment hook)
   can refuse a changed `payTo` at pay time: "Blocked by your rule: payTo changed since paid.lock".
 
 **Why now (sources, read 31 Oct 2026):**
@@ -213,8 +213,8 @@ DECISIONS entry and tell the owner.
    non-zero on any mismatch. "0 payments sent" is asserted by the mock seller counting payment headers seen.
 
 ### After MVP
-9. **Runtime library (`packages/runtime`, M5)**: `loadLock()`, `checkAgainstLock(method, url, paymentRequired)`
-   → `{ verdict, code, detail }`; adapters for the official x402 client's before-payment hook and for Claw Pay's
+9. **Runtime library (`packages/runtime`, M5)**: `loadLock()`, `checkAgainstLock(lock, method, url, paymentRequired)`
+   → `{ verdict, code, detail }` (lock passed in first: DECISIONS D-023, approved by the owner on 2 Nov 2026); adapters for the official x402 client's before-payment hook and for Claw Pay's
    gate (design note only until Claw Pay's x402 parser lands; no code in Claw-Pay from here).
 10. **MPP read support (M5)**, as in §2.
 

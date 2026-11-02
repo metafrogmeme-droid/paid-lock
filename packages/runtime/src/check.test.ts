@@ -12,7 +12,7 @@ import {
 import { parsePaymentRequired } from "@paid-lock/protocols";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { checkAgainstLock, checkResponse } from "./check.ts";
+import { allows, checkAgainstLock, checkResponse, checkSelected } from "./check.ts";
 
 // Test fixture: fake payTo addresses; the asset is Base Sepolia (testnet) USDC from the x402 v2 spec.
 const URL_ = "https://shop.example.com/v1/forecast";
@@ -207,5 +207,72 @@ describe("checkResponse (a raw unpaid HTTP response, for fetch wrappers)", () =>
   it("blocks an endpoint that is not in the lock without reading the response", () => {
     const r = checkResponse(lockFor(), "GET", "https://shop.example.com/x", { status: 402, headers: {}, body: "" });
     expect(r.code).toBe("NOT_IN_LOCK");
+  });
+});
+
+describe("checkSelected (the one option the client is about to pay)", () => {
+  const selected = (req: Record<string, unknown> = {}): Record<string, unknown> => {
+    const [first] = pr(req)["accepts"] as Record<string, unknown>[];
+    return first ?? {};
+  };
+
+  it("allows a pinned option within its maximum", () => {
+    const r = checkSelected(lockFor(), "GET", URL_, pr(), selected());
+    expect([r.verdict, r.code]).toEqual(["allowed", "OK"]);
+  });
+
+  it("checks the selected option itself, not only what the seller listed", () => {
+    // A client policy may transform the requirements before selection: the selected option is re-checked.
+    expect(checkSelected(lockFor(), "GET", URL_, pr(), selected({ payTo: OTHER_PAY })).code).toBe("PAYTO_CHANGED");
+    expect(checkSelected(lockFor(), "GET", URL_, pr(), selected({ amount: "10001" })).code).toBe("PRICE_ABOVE_LOCK");
+    expect(checkSelected(lockFor(), "GET", URL_, pr(), selected({ network: "eip155:8453" })).code).toBe(
+      "NETWORK_CHANGED",
+    );
+  });
+
+  it("does not report the other pinned options the client did not select as removed", () => {
+    const two = pr({}, {});
+    const second = { ...selected(), payTo: OTHER_PAY };
+    (two["accepts"] as unknown[]).push(second);
+    const parsed = parsePaymentRequired(two);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    const lock = emptyLock();
+    lock.endpoints[endpointKey("GET", URL_)] = newEndpoint(parsed.terms, { toleranceBps: 0 });
+    const r = checkSelected(lock, "GET", URL_, two, second);
+    expect([r.verdict, r.code, r.findings]).toEqual(["allowed", "OK", []]);
+  });
+
+  it("blocks when the resource URL, method or URL do not match, or the input is unreadable", () => {
+    const other = pr({}, { resource: { url: `${URL_}/x` } });
+    expect(checkSelected(lockFor(), "GET", URL_, other, selected()).code).toBe("RESOURCE_URL_MISMATCH");
+    expect(checkSelected(lockFor(), "PUT", URL_, pr(), selected()).code).toBe("NOT_IN_LOCK");
+    for (const [paymentRequired, sel] of [
+      [null, selected()],
+      [pr(), null],
+      [pr(), "x"],
+      ["garbage", selected()],
+    ] as const) {
+      const r = checkSelected(lockFor(), "GET", URL_, paymentRequired, sel);
+      expect([r.verdict, r.code]).toEqual(["blocked", "REQUIREMENTS_UNREADABLE"]);
+    }
+  });
+
+  it("property: never throws", () => {
+    const lock = lockFor();
+    fc.assert(
+      fc.property(fc.anything(), fc.anything(), (a, b) => {
+        expect(Object.keys(VERDICTS)).toContain(checkSelected(lock, "GET", URL_, a, b).verdict);
+      }),
+    );
+  });
+});
+
+describe("allows (which verdicts let a payment go ahead)", () => {
+  it("lets only Allowed through by default, and Needs your OK too only when loosened", () => {
+    const base = { code: "OK", detail: "", findings: [], notes: [] } as const;
+    expect(allows({ ...base, verdict: "allowed" })).toBe(true);
+    expect(allows({ ...base, verdict: "needsOk" })).toBe(false);
+    expect(allows({ ...base, verdict: "needsOk" }, "blocked")).toBe(true);
+    expect(allows({ ...base, verdict: "blocked" }, "blocked")).toBe(false);
   });
 });
