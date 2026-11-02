@@ -90,11 +90,13 @@ function io(opts: { tty?: boolean; answer?: string } = {}): Io & { text: () => s
 }
 const run = (args: string[], i = io()) => main([...args, "--lockfile", lockfile], i);
 const url = (p: string) => `${seller.origin}${p}`;
+/** The mock seller is on loopback: every add opts in, which is recorded in the lock entry's policy. */
+const LOCAL = "--allow-private-network";
 const readLock = () => readFileSync(lockfile, "utf8");
 
 async function initAndAdd(...paths: string[]): Promise<void> {
   expect(await run(["init"])).toBe(EXIT.allowed);
-  for (const p of paths) expect(await run(["add", url(p)])).toBe(EXIT.allowed);
+  for (const p of paths) expect(await run(["add", url(p), LOCAL])).toBe(EXIT.allowed);
 }
 
 describe("basics", () => {
@@ -135,19 +137,19 @@ describe("add", () => {
 
   it("applies --tolerance to the policy cap", async () => {
     await run(["init"]);
-    expect(await run(["add", url("/a"), "--tolerance", "10%"])).toBe(EXIT.allowed);
+    expect(await run(["add", url("/a"), LOCAL, "--tolerance", "10%"])).toBe(EXIT.allowed);
     expect(readLock()).toContain('"maxAmount": "11000"');
   });
 
   it.each(["abc", "-1%", "101%", "1.5%"])("refuses the tolerance %s", async (t) => {
     await run(["init"]);
-    expect(await run(["add", url("/a"), "--tolerance", t])).toBe(EXIT.toolError);
+    expect(await run(["add", url("/a"), LOCAL, "--tolerance", t])).toBe(EXIT.toolError);
   });
 
   it("refuses an endpoint that is already pinned", async () => {
     await initAndAdd("/a");
     const i = io();
-    expect(await run(["add", url("/a")], i)).toBe(EXIT.toolError);
+    expect(await run(["add", url("/a"), LOCAL], i)).toBe(EXIT.toolError);
     expect(i.errText()).toContain("paid-lock update");
   });
 
@@ -155,21 +157,42 @@ describe("add", () => {
     await run(["init"]);
     const before = readLock();
     const i = io();
-    expect(await run(["add", url("/free")], i)).toBe(EXIT.needsOk);
+    expect(await run(["add", url("/free"), LOCAL], i)).toBe(EXIT.needsOk);
     expect(i.text()).toContain("Needs your OK: endpoint did not answer 402 without payment (HTTP 200)");
     expect(readLock()).toBe(before);
   });
 
   it("does not pin unreadable terms (blocked)", async () => {
     await run(["init"]);
-    expect(await run(["add", url("/garbage")])).toBe(EXIT.blocked);
+    expect(await run(["add", url("/garbage"), LOCAL])).toBe(EXIT.blocked);
   });
 
   it("needs an existing lock and an allowed URL", async () => {
-    expect(await run(["add", url("/a")])).toBe(EXIT.toolError);
+    expect(await run(["add", url("/a"), LOCAL])).toBe(EXIT.toolError);
     await run(["init"]);
     expect(await run(["add", "http://api.example.com/x"])).toBe(EXIT.toolError);
     expect(await run(["add"])).toBe(EXIT.toolError);
+  });
+});
+
+describe("address policy", () => {
+  it("refuses a loopback endpoint without --allow-private-network, before any request", async () => {
+    await run(["init"]);
+    const before = seller.stats().requests;
+    const i = io();
+    expect(await run(["add", url("/a")], i)).toBe(EXIT.toolError);
+    expect(i.errText()).toContain("loopback address; refused before any request");
+    expect(seller.stats().requests).toBe(before);
+  });
+
+  it("records the opt-in, and verify refuses once it is removed from the lock", async () => {
+    await initAndAdd("/a");
+    expect(readLock()).toContain('"allowPrivateNetwork": true');
+    const lock = JSON.parse(readLock()) as { endpoints: Record<string, { policy: Record<string, unknown> }> };
+    for (const ep of Object.values(lock.endpoints)) delete ep.policy["allowPrivateNetwork"];
+    writeFileSync(lockfile, JSON.stringify(lock));
+    expect(readLock()).not.toContain("allowPrivateNetwork");
+    expect(await run(["verify"])).toBe(EXIT.toolError);
   });
 });
 
@@ -210,7 +233,9 @@ describe("verify", () => {
     await initAndAdd("/a");
     expect(await run(["verify", url("/a")])).toBe(EXIT.allowed);
     const i = io();
+    const before = seller.stats().requests;
     expect(await run(["verify", url("/b")], i)).toBe(EXIT.blocked);
+    expect(seller.stats().requests).toBe(before);
     expect(i.text()).toContain("Blocked by your rule: endpoint is not in paid.lock");
   });
 
@@ -276,7 +301,7 @@ describe("update", () => {
 
   it("keeps the owner's policy when accepting (only observed is rewritten)", async () => {
     await run(["init"]);
-    await run(["add", url("/a"), "--tolerance", "10%"]);
+    await run(["add", url("/a"), LOCAL, "--tolerance", "10%"]);
     seller.use(scenario({ version: "3" }));
     await run(["update", url("/a"), "--accept-change", "TERMS_CHANGED_OTHER"]);
     expect(readLock()).toContain('"maxAmount": "11000"');

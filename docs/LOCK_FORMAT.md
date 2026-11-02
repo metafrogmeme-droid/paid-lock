@@ -67,16 +67,17 @@ Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid
 
 ## Fields
 
-| Path                            | Meaning                                                                                                                            |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `lockfileVersion`               | `1`.                                                                                                                               |
-| `observed.protocol`             | `"x402"` (MPP arrives in M5).                                                                                                      |
-| `observed.x402Version`          | Pinned. A different version is `PROTOCOL_VERSION_CHANGED` (Needs your OK).                                                         |
-| `observed.resourceUrl`          | `resource.url` (v2) or the accepts' `resource` (v1), normalised as above; any difference is `RESOURCE_URL_MISMATCH` (Blocked).     |
-| `observed.envelopeIntegrity`    | Hash of the parts outside `accepts[]` that can change terms (see below).                                                           |
-| `observed.options.<id>.*`       | The normalised option (fields below) plus `integrity`, its terms hash.                                                             |
-| `policy.options.<id>.maxAmount` | Highest acceptable `amount` in atomic units. Defaults to the observed amount (zero tolerance).                                     |
-| `policy.tighten`                | Optional list of "Needs your OK" codes the owner turns into "Blocked". Blocked codes cannot be listed, so nothing loosens a block. |
+| Path                            | Meaning                                                                                                                                                                                                                                 |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lockfileVersion`               | `1`.                                                                                                                                                                                                                                    |
+| `observed.protocol`             | `"x402"` (MPP arrives in M5).                                                                                                                                                                                                           |
+| `observed.x402Version`          | Pinned. A different version is `PROTOCOL_VERSION_CHANGED` (Needs your OK).                                                                                                                                                              |
+| `observed.resourceUrl`          | `resource.url` (v2) or the accepts' `resource` (v1), normalised as above; any difference is `RESOURCE_URL_MISMATCH` (Blocked).                                                                                                          |
+| `observed.envelopeIntegrity`    | Hash of the parts outside `accepts[]` that can change terms (see below).                                                                                                                                                                |
+| `observed.options.<id>.*`       | The normalised option (fields below) plus `integrity`, its terms hash.                                                                                                                                                                  |
+| `policy.options.<id>.maxAmount` | Highest acceptable `amount` in atomic units. Defaults to the observed amount (zero tolerance).                                                                                                                                          |
+| `policy.allowPrivateNetwork`    | Optional, `true` only. Allows probing this endpoint on a private, link-local or loopback address (refused by default; owner decision of 2 Nov 2026). Written by `paid-lock add --allow-private-network`. Review it like a payTo change. |
+| `policy.tighten`                | Optional list of "Needs your OK" codes the owner turns into "Blocked". Blocked codes cannot be listed, so nothing loosens a block.                                                                                                      |
 
 ### Normalised option
 

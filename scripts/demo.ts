@@ -108,7 +108,8 @@ try {
   process.stdout.write(`paid.lock demo: mock seller on ${seller.origin}, working in ${dir}\n\n`);
   if ((await cli(["init"])).status !== 0) throw new Error("init failed");
   for (const name of Object.keys(PAY) as Name[]) {
-    const r = await cli(["add", url(name)]);
+    // The mock seller is on loopback, which paid-lock refuses unless the entry opts in.
+    const r = await cli(["add", url(name), "--allow-private-network"]);
     if (r.status !== 0) throw new Error(`add ${name} failed: ${r.stdout}`);
   }
   const git = (...args: string[]) =>

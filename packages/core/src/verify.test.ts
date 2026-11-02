@@ -6,6 +6,7 @@ import { emptyLock, endpointKey, newEndpoint, type Lock } from "./lock.ts";
 import { normalizeTerms, optionId, type ObservedTerms, type PaymentOption } from "./terms.ts";
 import {
   acceptObservation,
+  notInLock,
   summarize,
   verifyEndpoint,
   verifySamples,
@@ -204,6 +205,12 @@ describe("verifyEndpoint: needs your OK", () => {
     const r = verifyEndpoint(lock, KEY, withOption({ maxTimeoutSeconds: 1 }));
     expect(r.verdict).toBe("blocked");
     expect(r.findings[0]?.line.startsWith("Blocked by your rule: ")).toBe(true);
+  });
+});
+
+describe("notInLock", () => {
+  it("is the same result verify gives for an unknown endpoint", () => {
+    expect(notInLock(KEY)).toEqual(verifyEndpoint(emptyLock(), KEY, live(terms())));
   });
 });
 

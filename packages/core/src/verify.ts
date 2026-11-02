@@ -179,6 +179,13 @@ export function verifySamples(lock: Lock, key: string, samples: readonly Observa
   return c.result(key);
 }
 
+/** Result for an endpoint that is not in paid.lock: Blocked, without probing it at all. */
+export function notInLock(key: string): EndpointResult {
+  const c = new Collector([]);
+  c.add("NOT_IN_LOCK");
+  return c.result(key);
+}
+
 /** Normalised terms, or undefined after adding the finding that explains why there are none. */
 function readableTerms(c: Collector, obs: Observation): ObservedTerms | undefined {
   switch (obs.kind) {

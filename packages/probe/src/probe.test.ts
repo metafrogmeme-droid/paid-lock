@@ -1,8 +1,8 @@
 // Written with AI help.
 import { parseScenario, startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
 import { createServer } from "node:net";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { probe } from "./probe.ts";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { DEFAULT_TIMEOUT_MS, probe, sendPinned, USER_AGENT } from "./probe.ts";
 import { ProbeUrlError } from "./url-policy.ts";
 
 const PAY = "0x0000000000000000000000000000000000001001";
@@ -59,6 +59,9 @@ afterAll(async () => {
   await seller.close();
 });
 
+/** The mock seller is on loopback, which the probe refuses unless the lock entry opts in. */
+const LOCAL = { allowPrivateNetwork: true } as const;
+
 /** Request header names a plain unpaid fetch may send. Nothing else, in particular no auth, cookie or payment header. */
 const ALLOWED_HEADER_NAMES = new Set([
   "accept",
@@ -75,7 +78,7 @@ const ALLOWED_HEADER_NAMES = new Set([
 describe("probe against the mock seller", () => {
   it("reads x402 v2 terms twice and sends no payment, auth or cookie header", async () => {
     const before = seller.stats().requests;
-    const r = await probe(`${seller.origin}/v2`);
+    const r = await probe(`${seller.origin}/v2`, LOCAL);
     expect(r.samples.map((s) => s.kind)).toEqual(["terms", "terms"]);
     const stats = seller.stats();
     expect(stats.requests - before).toBe(2);
@@ -84,30 +87,33 @@ describe("probe against the mock seller", () => {
   });
 
   it("reads x402 v1 bodies", async () => {
-    const r = await probe(`${seller.origin}/v1`, { samples: 1 });
+    const r = await probe(`${seller.origin}/v1`, { ...LOCAL, samples: 1 });
     expect(r.samples[0]?.kind === "terms" && r.samples[0].terms.x402Version).toBe(1);
   });
 
   it("probes POST endpoints with a fixture body", async () => {
-    const r = await probe(`${seller.origin}/v2`, { method: "POST", body: '{"q":"test"}', samples: 1 });
+    const r = await probe(`${seller.origin}/v2`, { ...LOCAL, method: "POST", body: '{"q":"test"}', samples: 1 });
     expect(r.samples[0]?.kind).toBe("terms");
   });
 
   it("reports an endpoint that answers 200 unpaid", async () => {
-    expect((await probe(`${seller.origin}/free`, { samples: 1 })).samples[0]).toEqual({ kind: "not402", status: 200 });
+    expect((await probe(`${seller.origin}/free`, { ...LOCAL, samples: 1 })).samples[0]).toEqual({
+      kind: "not402",
+      status: 200,
+    });
   });
 
   it("never follows redirects and never prints the Location value", async () => {
-    const away = (await probe(`${seller.origin}/away`, { samples: 1 })).samples[0];
+    const away = (await probe(`${seller.origin}/away`, { ...LOCAL, samples: 1 })).samples[0];
     expect(away).toEqual({ kind: "not402", status: 302, detail: "redirect to another host, not followed" });
-    const near = (await probe(`${seller.origin}/near`, { samples: 1 })).samples[0];
+    const near = (await probe(`${seller.origin}/near`, { ...LOCAL, samples: 1 })).samples[0];
     expect(near).toEqual({ kind: "not402", status: 307, detail: "redirect on the same host, not followed" });
-    expect((await probe(`${seller.origin}/noloc`, { samples: 1 })).samples[0]).toEqual({
+    expect((await probe(`${seller.origin}/noloc`, { ...LOCAL, samples: 1 })).samples[0]).toEqual({
       kind: "not402",
       status: 301,
       detail: "redirect without a target, not followed",
     });
-    expect((await probe(`${seller.origin}/badloc`, { samples: 1 })).samples[0]).toEqual({
+    expect((await probe(`${seller.origin}/badloc`, { ...LOCAL, samples: 1 })).samples[0]).toEqual({
       kind: "not402",
       status: 302,
       detail: "redirect to an unreadable target, not followed",
@@ -115,16 +121,16 @@ describe("probe against the mock seller", () => {
   });
 
   it("reports a garbage PAYMENT-REQUIRED header as unreadable", async () => {
-    expect((await probe(`${seller.origin}/garbage`, { samples: 1 })).samples[0]?.kind).toBe("unreadable");
+    expect((await probe(`${seller.origin}/garbage`, { ...LOCAL, samples: 1 })).samples[0]?.kind).toBe("unreadable");
   });
 
   it("stops reading a body above the size limit", async () => {
-    const r = await probe(`${seller.origin}/big`, { samples: 1, maxBodyBytes: 1024 });
+    const r = await probe(`${seller.origin}/big`, { ...LOCAL, samples: 1, maxBodyBytes: 1024 });
     expect(r.samples[0]).toEqual({ kind: "unreadable", reason: "response body is larger than 1024 bytes" });
   });
 
   it("times out", async () => {
-    expect((await probe(`${seller.origin}/slow`, { samples: 1, timeoutMs: 100 })).samples[0]).toEqual({
+    expect((await probe(`${seller.origin}/slow`, { ...LOCAL, samples: 1, timeoutMs: 100 })).samples[0]).toEqual({
       kind: "timeout",
     });
   });
@@ -139,7 +145,7 @@ describe("probe against the mock seller", () => {
         });
       });
     });
-    const r = await probe(`http://127.0.0.1:${String(port)}/x`, { samples: 1 });
+    const r = await probe(`http://127.0.0.1:${String(port)}/x`, { ...LOCAL, samples: 1 });
     expect(r.samples[0]).toMatchObject({ kind: "not402", status: 0 });
   });
 });
@@ -156,5 +162,110 @@ describe("probe input checks (before any request)", () => {
     await expect(probe(`${seller.origin}/v2`, { samples: 0 })).rejects.toThrow(RangeError);
     await expect(probe(`${seller.origin}/v2`, { samples: 6 })).rejects.toThrow(RangeError);
     await expect(probe(`${seller.origin}/v2`, { body: "{}" })).rejects.toThrow(RangeError);
+  });
+});
+
+describe("address policy (owner decision, 2 Nov 2026)", () => {
+  it("refuses the loopback mock seller without the opt-in, before any request", async () => {
+    const before = seller.stats().requests;
+    await expect(probe(`${seller.origin}/v2`)).rejects.toThrow(/loopback address; refused before any request/);
+    expect(seller.stats().requests).toBe(before);
+  });
+
+  it.each([
+    ["IPv4 private", "https://10.0.0.1/x"],
+    ["IPv4 link-local (cloud metadata)", "https://169.254.169.254/latest/meta-data"],
+    ["IPv4 written in hex", "https://0x7f000001/x"],
+    ["IPv4 written as one number", "https://2130706433/x"],
+    ["IPv6 loopback", "http://[::1]:4021/x"],
+    ["IPv6 link-local", "https://[fe80::1]/x"],
+    ["IPv6 unique local", "https://[fd00::1]/x"],
+    ["IPv4-mapped IPv6", "https://[::ffff:192.168.0.1]/x"],
+  ])("refuses a literal %s address without touching DNS", async (_name, url) => {
+    const resolve = vi.fn(() => Promise.resolve([]));
+    await expect(probe(url, { resolve, samples: 1 })).rejects.toThrow(/refused before any request/);
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("uses the system resolver by default: localhost resolves to loopback and is refused", async () => {
+    await expect(probe("https://localhost/x", { samples: 1 })).rejects.toThrow(
+      /loopback address; refused before any request/,
+    );
+  });
+
+  it("treats duplicate PAYMENT-REQUIRED headers as unreadable (Node joins them)", async () => {
+    seller.use(
+      parseScenario({
+        _label: "Written with AI help, test fixture.",
+        name: "dup",
+        routes: [
+          {
+            method: "GET",
+            path: "/dup",
+            respond: { kind: "raw", status: 402, headers: { "PAYMENT-REQUIRED": "e30=" } },
+          },
+        ],
+      }),
+    );
+    const r = await probe(`${seller.origin}/dup`, { ...LOCAL, samples: 1 });
+    expect(r.samples[0]?.kind).toBe("unreadable");
+    seller.use(scenario);
+  });
+
+  it("refuses a DNS name that resolves to a private address", async () => {
+    const resolve = () => Promise.resolve([{ address: "10.1.2.3", family: 4 as const }]);
+    await expect(probe("https://seller.example/x", { resolve, samples: 1 })).rejects.toThrow(
+      /resolves to a private address/,
+    );
+  });
+
+  it("refuses a DNS name when any one of its answers is private (mixed records)", async () => {
+    const resolve = () =>
+      Promise.resolve([
+        { address: "93.184.216.34", family: 4 as const },
+        { address: "fe80::1", family: 6 as const },
+      ]);
+    await expect(probe("https://seller.example/x", { resolve, samples: 1 })).rejects.toThrow(/link-local/);
+  });
+
+  it("reports a name that does not resolve as a refusal", async () => {
+    const resolve = () => Promise.reject(Object.assign(new Error("nope"), { code: "ENOTFOUND" }));
+    await expect(probe("https://seller.example/x", { resolve, samples: 1 })).rejects.toThrow(
+      /could not be resolved \(ENOTFOUND\)/,
+    );
+  });
+
+  it("DNS rebinding: resolves once per request and connects to exactly the checked address", async () => {
+    // The resolver answers loopback first and an attacker-chosen address afterwards. The probe must
+    // never ask twice for one request, so the later answer can never be used.
+    const answers = ["127.0.0.1", "10.66.66.66"];
+    const resolve = vi.fn(() => Promise.resolve([{ address: answers.shift() ?? "10.66.66.66", family: 4 as const }]));
+    const port = new URL(seller.origin).port;
+    const r = await probe(`http://localhost:${port}/v2`, { ...LOCAL, resolve, samples: 1 });
+    expect(r.samples[0]?.kind).toBe("terms");
+    expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it("DNS rebinding: the connection uses the pinned address and never looks the name up again", async () => {
+    // "rebind.invalid" cannot resolve anywhere (RFC 6761), so reaching the mock seller proves the
+    // socket went to the pinned address without a second DNS query.
+    const port = new URL(seller.origin).port;
+    const res = await sendPinned(
+      new URL(`http://rebind.invalid:${port}/v2`),
+      { address: "127.0.0.1", family: 4 },
+      {
+        method: "GET",
+        timeoutMs: DEFAULT_TIMEOUT_MS,
+        maxBodyBytes: 1024,
+        allowPrivateNetwork: true,
+        resolve: () => Promise.reject(new Error("must not be called")),
+      },
+    );
+    expect(res.statusCode).toBe(402);
+    res.destroy();
+  });
+
+  it("identifies itself honestly", () => {
+    expect(USER_AGENT).toContain("never pays");
   });
 });

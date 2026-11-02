@@ -49,6 +49,13 @@ describe("newEndpoint", () => {
     expect(ep.observed.envelopeIntegrity).toMatch(/^sha256-/);
   });
 
+  it("records the private-network opt-in only when asked", () => {
+    expect(newEndpoint(normalized(), { toleranceBps: 0 }).policy.allowPrivateNetwork).toBeUndefined();
+    expect(newEndpoint(normalized(), { toleranceBps: 0, allowPrivateNetwork: true }).policy.allowPrivateNetwork).toBe(
+      true,
+    );
+  });
+
   it("applies a tolerance to the policy only", () => {
     const ep = newEndpoint(normalized(), { toleranceBps: 1000 });
     const id = optionId(option());
@@ -118,6 +125,11 @@ describe("serializeLock / parseLock", () => {
     const r = parseLock(mutate(f));
     expect(r.ok).toBe(false);
     expect(!r.ok && r.errors.length).toBeGreaterThan(0);
+  });
+
+  it("accepts the private-network opt-in as true only", () => {
+    expect(parseLock(mutate((_l, e) => (e.policy.allowPrivateNetwork = true))).ok).toBe(true);
+    expect(parseLock(mutate((_l, e) => Object.assign(e.policy, { allowPrivateNetwork: false }))).ok).toBe(false);
   });
 
   it("accepts a valid tighten list", () => {

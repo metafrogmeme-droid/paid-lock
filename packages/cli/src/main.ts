@@ -10,6 +10,7 @@ import {
   MAX_TOLERANCE_BPS,
   newEndpoint,
   normalizeTerms,
+  notInLock,
   summarize,
   verifySamples,
   verifyUnpinned,
@@ -50,6 +51,8 @@ Options:
   --lockfile <path>     default: paid.lock
   --method GET|POST     add: request method (default GET)
   --tolerance <n%>      add: allow price rises up to n% (0-100, whole number; default 0)
+  --allow-private-network  add: allow a private, link-local or loopback address (recorded in the
+                        endpoint's policy; refused by default)
   --fail-on <level>     verify: needs-ok (default: exit non-zero on Blocked and Needs your OK) or blocked
   --accept-change <code> update without a TTY: accept this reason code (repeat for each code)
   --json                machine-readable output
@@ -81,7 +84,10 @@ async function check(
   url: string,
 ): Promise<{ key: string; result: EndpointResult; terms?: ObservedTerms }> {
   const key = endpointKey(method, url);
-  const { samples } = await probe(url, { method });
+  // An endpoint that is not pinned is never probed: it is Blocked as NOT_IN_LOCK right away.
+  if (!Object.hasOwn(lock.endpoints, key)) return { key, result: notInLock(key) };
+  const allowPrivateNetwork = lock.endpoints[key]?.policy.allowPrivateNetwork === true;
+  const { samples } = await probe(url, { method, allowPrivateNetwork });
   const result = verifySamples(lock, key, samples);
   const first = samples[0];
   return first?.kind === "terms" ? { key, result, terms: first.terms } : { key, result };
@@ -113,6 +119,7 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       lockfile: { type: "string", default: "paid.lock" },
       method: { type: "string" },
       tolerance: { type: "string" },
+      "allow-private-network": { type: "boolean", default: false },
       "fail-on": { type: "string", default: "needs-ok" },
       "accept-change": { type: "string", multiple: true, default: [] },
       all: { type: "boolean", default: false },
@@ -152,7 +159,8 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       const key = endpointKey(method, target);
       if (Object.hasOwn(lock.endpoints, key))
         throw new CliError(`${key} is already in paid.lock (use paid-lock update)`);
-      const { samples } = await probe(target, { method });
+      const allowPrivateNetwork = values["allow-private-network"];
+      const { samples } = await probe(target, { method, allowPrivateNetwork });
       const result = verifyUnpinned(key, samples);
       const first = samples[0];
       const n = first?.kind === "terms" ? normalizeTerms(first.terms) : undefined;
@@ -160,7 +168,10 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         print(renderResult(result, false), { added: false, result });
         return exitFor(result.verdict);
       }
-      const candidate = { ...lock, endpoints: { ...lock.endpoints, [key]: newEndpoint(n.terms, { toleranceBps }) } };
+      const candidate = {
+        ...lock,
+        endpoints: { ...lock.endpoints, [key]: newEndpoint(n.terms, { toleranceBps, allowPrivateNetwork }) },
+      };
       writeLock(path, candidate);
       print(`${renderResult(result, false)}added to ${path}; review the diff before committing\n`, {
         added: true,
