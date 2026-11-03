@@ -242,3 +242,12 @@ describe("MPP endpoints in the lock (D-027)", () => {
     expect(parseLock(JSON.stringify(x402)).ok).toBe(false);
   });
 });
+
+describe("parseLock refuses duplicate JSON keys (review L4)", () => {
+  it("does not let a second maxAmount hide behind the first", () => {
+    const text = serializeLock(lockWith());
+    const dup = text.replace('"maxAmount": "10000"', '"maxAmount": "10000", "maxAmount": "99999999999"');
+    expect(dup).not.toBe(text);
+    expect(parseLock(dup)).toEqual({ ok: false, errors: ["paid.lock has a duplicate key"] });
+  });
+});

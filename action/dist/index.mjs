@@ -752,6 +752,45 @@ function isJsonObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// packages/core/src/json-guard.ts
+function parseJsonGuarded(text, maxBytes) {
+  if (new TextEncoder().encode(text).length > maxBytes) return { ok: false, reason: "JSON text is too large" };
+  const stack = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
+      const top = stack.at(-1);
+      if (top?.keys && top.expectKey) {
+        let key;
+        try {
+          key = JSON.parse(text.slice(i, j + 1));
+        } catch {
+          return { ok: false, reason: "invalid JSON string" };
+        }
+        if (typeof key !== "string" || top.keys.has(key)) return { ok: false, reason: "duplicate object key" };
+        top.keys.add(key);
+        top.expectKey = false;
+      }
+      i = j;
+    } else if (ch === "{" || ch === "[") {
+      if (stack.length >= MAX_DEPTH) return { ok: false, reason: `JSON nests deeper than ${String(MAX_DEPTH)}` };
+      stack.push({ keys: ch === "{" ? /* @__PURE__ */ new Set() : null, expectKey: ch === "{" });
+    } else if (ch === "}" || ch === "]") {
+      stack.pop();
+    } else if (ch === ",") {
+      const top = stack.at(-1);
+      if (top?.keys) top.expectKey = true;
+    }
+  }
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, reason: "invalid JSON" };
+  }
+}
+
 // node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -20575,6 +20614,7 @@ function normalizeOption(o) {
     return { ok: false, reason: "maxTimeoutSeconds is not a non-negative integer" };
   }
   if (!PAYMENT_FLOWS.includes(o.paymentFlow)) return { ok: false, reason: "payment flow is not one x402 defines" };
+  if (o.assetTransferMethod === "") return { ok: false, reason: "assetTransferMethod is empty" };
   const asset = normalizeAddress(o.network, o.asset);
   if (!asset.ok) return { ok: false, reason: `asset: ${asset.reason}` };
   const payTo = normalizeAddress(o.network, o.payTo);
@@ -20689,22 +20729,15 @@ function endpointKey(method, url2) {
 }
 function parseLock(text) {
   if (new TextEncoder().encode(text).length > MAX_LOCK_BYTES) return { ok: false, errors: ["paid.lock is too large"] };
-  let raw;
-  try {
-    raw = JSON.parse(text);
-  } catch {
+  const json2 = parseJsonGuarded(text, MAX_LOCK_BYTES);
+  if (!json2.ok) {
+    if (json2.reason === "duplicate object key") return { ok: false, errors: ["paid.lock has a duplicate key"] };
+    if (json2.reason.startsWith("JSON nests deeper")) return { ok: false, errors: ["paid.lock is nested too deeply"] };
     return { ok: false, errors: ["paid.lock is not valid JSON"] };
   }
-  if (tooDeep(raw, MAX_DEPTH)) return { ok: false, errors: ["paid.lock is nested too deeply"] };
-  const r = LockSchema.safeParse(raw);
+  const r = LockSchema.safeParse(json2.value);
   if (!r.success) return { ok: false, errors: r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) };
   return { ok: true, lock: r.data };
-}
-function tooDeep(v, limit) {
-  if (v === null || typeof v !== "object") return false;
-  if (limit === 0) return true;
-  const children = Array.isArray(v) ? v : Object.values(v);
-  return children.some((c) => tooDeep(c, limit - 1));
 }
 
 // packages/core/src/verify.ts
@@ -20891,42 +20924,8 @@ function decodeBase64Strict(input3, maxBytes = MAX_HEADER_BYTES) {
     return { ok: false, reason: "Base64 content is not UTF-8" };
   }
 }
-function parseJsonGuarded(text, maxBytes = MAX_BODY_BYTES) {
-  if (new TextEncoder().encode(text).length > maxBytes) return { ok: false, reason: "JSON text is too large" };
-  const stack = [];
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    if (ch === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== '"') j += text[j] === "\\" ? 2 : 1;
-      const top = stack.at(-1);
-      if (top?.keys && top.expectKey) {
-        let key;
-        try {
-          key = JSON.parse(text.slice(i, j + 1));
-        } catch {
-          return { ok: false, reason: "invalid JSON string" };
-        }
-        if (typeof key !== "string" || top.keys.has(key)) return { ok: false, reason: "duplicate object key" };
-        top.keys.add(key);
-        top.expectKey = false;
-      }
-      i = j;
-    } else if (ch === "{" || ch === "[") {
-      if (stack.length >= MAX_DEPTH) return { ok: false, reason: `JSON nests deeper than ${String(MAX_DEPTH)}` };
-      stack.push({ keys: ch === "{" ? /* @__PURE__ */ new Set() : null, expectKey: ch === "{" });
-    } else if (ch === "}" || ch === "]") {
-      stack.pop();
-    } else if (ch === ",") {
-      const top = stack.at(-1);
-      if (top?.keys) top.expectKey = true;
-    }
-  }
-  try {
-    return { ok: true, value: JSON.parse(text) };
-  } catch {
-    return { ok: false, reason: "invalid JSON" };
-  }
+function parseJsonGuarded2(text, maxBytes = MAX_BODY_BYTES) {
+  return parseJsonGuarded(text, maxBytes);
 }
 
 // packages/protocols/src/headers.ts
@@ -21042,7 +21041,7 @@ function parseChallenges(header) {
       const name = token().toLowerCase();
       if (name === "") return fail("expected an auth-param name");
       ows();
-      if (header[i] !== "=") return fail(`expected "=" after ${name.slice(0, 40)}`);
+      if (header[i] !== "=") return fail('expected "=" after an auth-param name');
       i += 1;
       ows();
       let value;
@@ -21052,9 +21051,9 @@ function parseChallenges(header) {
         value = q;
       } else {
         value = token();
-        if (value === "") return fail(`missing value for ${name.slice(0, 40)}`);
+        if (value === "") return fail("an auth-param has no value");
       }
-      if (Object.hasOwn(c.params, name)) return fail(`duplicate auth-param ${name.slice(0, 40)}`);
+      if (Object.hasOwn(c.params, name)) return fail("duplicate auth-param");
       c.params[name] = value;
       ows();
       if (i >= header.length) break;
@@ -21089,7 +21088,7 @@ function decodeRequest(value) {
   const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - value.length % 4) % 4);
   const decoded = decodeBase64Strict(padded, MAX_HEADER_BYTES);
   if (!decoded.ok) return { ok: false, reason: `MPP request: ${decoded.reason}` };
-  const json2 = parseJsonGuarded(decoded.text, MAX_HEADER_BYTES);
+  const json2 = parseJsonGuarded2(decoded.text, MAX_HEADER_BYTES);
   if (!json2.ok) return { ok: false, reason: `MPP request: ${json2.reason}` };
   if (!isJsonObject(json2.value)) return { ok: false, reason: "MPP request is not a JSON object" };
   if (canonicalize(json2.value) !== decoded.text) return { ok: false, reason: "MPP request is not JCS (RFC 8785)" };
@@ -21103,8 +21102,7 @@ function toOption(c) {
   }
   const { realm = "", method = "", intent = "", request = "" } = p;
   if (!METHOD.test(method)) return { ok: false, reason: "MPP method is not a lowercase ASCII identifier" };
-  if (intent !== "charge")
-    return { ok: false, reason: `MPP intent "${intent.slice(0, 40)}" is not one paid.lock reads` };
+  if (intent !== "charge") return { ok: false, reason: "MPP intent is not one paid.lock reads (only charge)" };
   const decoded = decodeRequest(request);
   if (!decoded.ok) return decoded;
   const r = ChargeRequest.safeParse(decoded.request);
@@ -21249,7 +21247,7 @@ function zodReason(prefix, error62) {
 function parseX402V2Header(header) {
   const decoded = decodeBase64Strict(header, MAX_HEADER_BYTES);
   if (!decoded.ok) return decoded;
-  const json2 = parseJsonGuarded(decoded.text, MAX_HEADER_BYTES);
+  const json2 = parseJsonGuarded2(decoded.text, MAX_HEADER_BYTES);
   if (!json2.ok) return json2;
   return fromV2Json(json2.value);
 }
@@ -21288,7 +21286,7 @@ function fromV2Json(value) {
   };
 }
 function parseX402V1Body(body2) {
-  const json2 = parseJsonGuarded(body2, MAX_BODY_BYTES);
+  const json2 = parseJsonGuarded2(body2, MAX_BODY_BYTES);
   if (!json2.ok) return json2;
   return fromV1Json(json2.value);
 }
@@ -21302,8 +21300,7 @@ function fromV1Json(value) {
   const options = [];
   for (const req of r.data.accepts) {
     const network = v1NetworkToCaip2(req.network);
-    if (network === void 0)
-      return { ok: false, reason: `x402 v1: unknown network name "${req.network.slice(0, 40)}"` };
+    if (network === void 0) return { ok: false, reason: "x402 v1: unknown network name" };
     const extra = splitExtra(req.extra);
     if (!extra.ok) return extra;
     options.push({
@@ -21335,15 +21332,30 @@ function fromV1Json(value) {
 function toObservation(r) {
   return r.ok ? { kind: "terms", terms: r.terms } : { kind: "unreadable", reason: r.reason };
 }
-var BOTH = { kind: "unreadable", reason: "the response offers both x402 and MPP payment terms" };
+var BOTH = { kind: "unreadable", reason: "the response offers more than one set of payment terms" };
+function hasV1Body(body2) {
+  return body2.trim() !== "" && parseX402V1Body(body2).ok;
+}
+function offer(terms) {
+  const n = normalizeTerms(terms);
+  return n.ok ? canonicalize({ resourceUrl: n.terms.resourceUrl, options: n.terms.options }) : void 0;
+}
+function fromHeader(header, body2) {
+  const v2 = toObservation(parseX402V2Header(header));
+  if (v2.kind !== "terms" || body2.trim() === "") return v2;
+  const v1 = parseX402V1Body(body2);
+  if (!v1.ok) return v2;
+  const a = offer(v2.terms);
+  return a !== void 0 && a === offer(v1.terms) ? v2 : BOTH;
+}
 function observe402(res) {
   if (res.status !== 402) return { kind: "not402", status: res.status };
   const header = res.headers[X402_V2_PAYMENT_REQUIRED_HEADER.toLowerCase()];
   const auth = res.headers["www-authenticate"];
   const mpp = auth === void 0 ? { kind: "none" } : readMpp(auth, res.url ?? "");
-  if (header !== void 0) return mpp.kind === "none" ? toObservation(parseX402V2Header(header)) : BOTH;
+  if (header !== void 0) return mpp.kind === "none" ? fromHeader(header, res.body) : BOTH;
   if (mpp.kind === "none") return toObservation(parseX402V1Body(res.body));
-  if (res.body.trim() !== "" && parseX402V1Body(res.body).ok) return BOTH;
+  if (hasV1Body(res.body)) return BOTH;
   if (mpp.kind === "unreadable") return { kind: "unreadable", reason: mpp.reason };
   if (res.url === void 0) return { kind: "unreadable", reason: "MPP terms need the request URL" };
   return { kind: "terms", terms: mpp.terms };
@@ -21566,16 +21578,14 @@ async function probeOnce(target, opts) {
     }
     const header = res.headers["payment-required"];
     const auth = res.headers["www-authenticate"];
-    const headers = { ...typeof auth === "string" ? { "www-authenticate": auth } : {} };
-    const url2 = target.href;
-    if (typeof header === "string") {
-      res.destroy();
-      return observe402({ status: 402, headers: { ...headers, "payment-required": header }, body: "", url: url2 });
-    }
+    const headers = {
+      ...typeof auth === "string" ? { "www-authenticate": auth } : {},
+      ...typeof header === "string" ? { "payment-required": header } : {}
+    };
     const bytes = await readCapped(res, opts.maxBodyBytes);
     if (bytes === null)
       return { kind: "unreadable", reason: `response body is larger than ${String(opts.maxBodyBytes)} bytes` };
-    return observe402({ status: 402, headers, body: new TextDecoder().decode(bytes), url: url2 });
+    return observe402({ status: 402, headers, body: new TextDecoder().decode(bytes), url: opts.url });
   } catch (err) {
     if (isTimeout(err)) return { kind: "timeout" };
     return { kind: "unreadable", reason: "response could not be read" };
@@ -21590,6 +21600,7 @@ async function probe(url2, options = {}) {
   const method = options.method ?? "GET";
   if (options.body !== void 0 && method !== "POST") throw new RangeError("a request body needs method POST");
   const opts = {
+    url: normalized.value,
     method,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     maxBodyBytes: options.maxBodyBytes ?? MAX_BODY_BYTES,

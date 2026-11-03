@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { mppTerms, option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
+import { emptyLock, endpointKey, newEndpoint, parseLock, serializeLock } from "./lock.ts";
 import { normalizeTerms, optionId, optionIntegrity, type ObservedTerms, type PaymentOption } from "./terms.ts";
 
 describe("optionId", () => {
@@ -96,5 +97,39 @@ describe("normalizeTerms: protocol and version (MPP, D-027)", () => {
     expect(normalizeTerms(noVersion)).toEqual({ ok: false, reason: "x402Version must be a positive integer" });
     expect(normalizeTerms(terms({ x402Version: 0 })).ok).toBe(false);
     expect(normalizeTerms(terms({ x402Version: 1.5 })).ok).toBe(false);
+  });
+});
+
+describe("normalizeTerms output always fits the lock (review M3)", () => {
+  it("refuses an empty assetTransferMethod, which the lock schema cannot hold", () => {
+    expect(normalizeTerms(terms({ options: [option({ assetTransferMethod: "" })] }))).toEqual({
+      ok: false,
+      reason: "assetTransferMethod is empty",
+    });
+  });
+
+  it("property: whatever normalizeTerms accepts, the lock written from it parses back", () => {
+    const text = fc.string({ minLength: 0, maxLength: 6 });
+    fc.assert(
+      fc.property(
+        fc.record({
+          scheme: text,
+          asset: text,
+          payTo: text,
+          assetTransferMethod: fc.option(text, { nil: null }),
+          maxTimeoutSeconds: fc.integer({ min: -1, max: 10 }),
+          amount: fc.oneof(fc.constant("0"), fc.constant("10"), text),
+          extra: fc.dictionary(fc.string({ maxLength: 4 }), fc.jsonValue({ maxDepth: 2 }), { maxKeys: 3 }),
+        }),
+        (o) => {
+          const n = normalizeTerms(terms({ options: [option(o as Partial<PaymentOption>)] }));
+          if (!n.ok) return;
+          const lock = emptyLock();
+          lock.endpoints[endpointKey("GET", n.terms.resourceUrl)] = newEndpoint(n.terms, { toleranceBps: 0 });
+          const back = parseLock(serializeLock(lock));
+          expect(back.ok ? "ok" : back.errors.join("; ")).toBe("ok");
+        },
+      ),
+    );
   });
 });

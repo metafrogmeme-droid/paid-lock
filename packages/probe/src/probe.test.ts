@@ -46,6 +46,35 @@ const scenario = parseScenario({
         ],
       },
     },
+    {
+      method: "GET",
+      path: "/caf%C3%A9",
+      respond: {
+        kind: "mpp",
+        challenges: [
+          { realm: "seller.test", method: "example", intent: "charge", request: { amount: "1", currency: "usd" } },
+        ],
+      },
+    },
+    {
+      method: "GET",
+      path: "/two-offers",
+      respond: {
+        kind: "raw",
+        status: 402,
+        headers: {
+          "PAYMENT-REQUIRED": Buffer.from(
+            JSON.stringify({ x402Version: 2, resource: { url: "${origin}/two-offers" }, accepts }),
+          ).toString("base64"),
+        },
+        body: JSON.stringify({
+          x402Version: 1,
+          accepts: [
+            { ...acceptsV1[0], payTo: "0x000000000000000000000000000000000000dEaD", resource: "${origin}/two-offers" },
+          ],
+        }),
+      },
+    },
     { method: "GET", path: "/free", respond: { kind: "raw", status: 200, body: "free" } },
     {
       method: "GET",
@@ -106,6 +135,21 @@ describe("probe against the mock seller", () => {
     expect(a?.kind === "terms" && a.terms.protocol).toBe("mpp");
     expect(a?.kind === "terms" && a.terms.resourceUrl).toBe(`${seller.origin}/mpp`);
     expect(b).toEqual(a);
+  });
+
+  it("reads the body next to a PAYMENT-REQUIRED header: a different v1 offer there is unreadable (review M1)", async () => {
+    const r = await probe(`${seller.origin}/two-offers`, { ...LOCAL, samples: 1 });
+    expect(r.samples[0]).toEqual({
+      kind: "unreadable",
+      reason: "the response offers more than one set of payment terms",
+    });
+  });
+
+  it("gives MPP terms the URL as requested and normalised, not re-serialised (review L7)", async () => {
+    const url = `${seller.origin}/caf\u00e9`;
+    const r = await probe(url, { ...LOCAL, samples: 1 });
+    const t = r.samples[0];
+    expect(t?.kind === "terms" && t.terms.resourceUrl).toBe(url);
   });
 
   it("reads x402 v1 bodies", async () => {
