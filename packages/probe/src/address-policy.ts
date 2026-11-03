@@ -35,6 +35,12 @@ const RANGES: readonly [Category, string, number, "ipv4" | "ipv6"][] = [
   ["reserved", "2001:db8::", 32, "ipv6"],
   ["reserved", "100::", 64, "ipv6"],
   ["reserved", "64:ff9b:1::", 48, "ipv6"],
+  // Audit L1: IETF protocol assignments (Teredo 2001::/32, benchmarking, ORCHID, ...), deprecated
+  // site-local, documentation (RFC 9637) and SRv6 SIDs.
+  ["reserved", "2001::", 23, "ipv6"],
+  ["private", "fec0::", 10, "ipv6"],
+  ["reserved", "3fff::", 20, "ipv6"],
+  ["reserved", "5f00::", 16, "ipv6"],
 ];
 
 const LISTS = new Map<Category, BlockList>();
@@ -67,11 +73,18 @@ function v4(hi: number, lo: number): string {
   return `${String(hi >> 8)}.${String(hi & 255)}.${String(lo >> 8)}.${String(lo & 255)}`;
 }
 
-/** An IPv4 address carried inside a NAT64 (64:ff9b::/96) or 6to4 (2002::/16) IPv6 address. */
+/**
+ * An IPv4 address carried inside an IPv6 address: NAT64 (64:ff9b::/96), 6to4 (2002::/16), the deprecated
+ * IPv4-compatible form (::/96) and IPv4-translated (::ffff:0:0/96) form (audit L1), and IPv4-mapped (::ffff:0/96).
+ */
 function embeddedV4(ip: string): string | undefined {
   const g = groups(ip);
-  if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return v4(g[6] ?? 0, g[7] ?? 0);
+  const zero = (from: number, to: number): boolean => g.slice(from, to).every((x) => x === 0);
+  if (g[0] === 0x64 && g[1] === 0xff9b && zero(2, 6)) return v4(g[6] ?? 0, g[7] ?? 0);
   if (g[0] === 0x2002) return v4(g[1] ?? 0, g[2] ?? 0);
+  if (zero(0, 6) || (zero(0, 4) && g[4] === 0xffff && g[5] === 0) || (zero(0, 5) && g[5] === 0xffff)) {
+    return v4(g[6] ?? 0, g[7] ?? 0);
+  }
   return undefined;
 }
 

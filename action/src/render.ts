@@ -6,18 +6,33 @@ import { EXPLAIN } from "paid-lock";
 
 const MD_SPECIAL = /[\\`*_{}[\]()#+\-.!|~]/g;
 
-/** Escape text for GitHub-flavoured Markdown: HTML entities, then backslash-escape ASCII punctuation. */
+/**
+ * Escape text for GitHub-flavoured Markdown: HTML entities, then backslash-escape ASCII punctuation, then
+ * break `@` with a zero-width space so seller text cannot mention a user or team (audit L2).
+ */
 export function escapeMarkdown(text: string): string {
   return text
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replace(MD_SPECIAL, (c) => `\\${c}`);
+    .replace(MD_SPECIAL, (c) => `\\${c}`)
+    .replaceAll("@", "@&#8203;");
 }
 
-/** Workflow command message (actions/toolkit escapeData). */
+/** The runner's legacy command syntax (`##[name]`), broken with a zero-width space wherever it appears. */
+function breakLegacyCommands(text: string): string {
+  return text.replaceAll("##[", "##\u200b[");
+}
+
+/** A plain log line that carries seller text: no legacy `##[` command and no leading `::` (audit L2). */
+export function escapeLog(text: string): string {
+  const broken = breakLegacyCommands(text);
+  return broken.trimStart().startsWith("::") ? `\u200b${broken}` : broken;
+}
+
+/** Workflow command message (actions/toolkit escapeData, plus the legacy `##[` syntax broken). */
 export function escapeCommandData(text: string): string {
-  return text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+  return breakLegacyCommands(text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A"));
 }
 
 /** Workflow command property (actions/toolkit escapeProperty). */
