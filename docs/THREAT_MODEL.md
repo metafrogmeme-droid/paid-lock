@@ -1,7 +1,8 @@
-# Threat model (v1, M2)
+# Threat model (final for 0.1.0, M6)
 
 Structure follows the threat-model layout of the `-claw-guard-near-` reference project (assets, actors, threats with
-mitigations and the test that proves each). Grows with every milestone.
+mitigations and the test that proves each). Started in M2, extended in every milestone, reviewed in the M6 audit
+(docs/AUDIT.md).
 
 ## What paid.lock protects
 
@@ -53,6 +54,14 @@ paid.lock itself holds **no keys and moves no money** (CLAUDE.md §5 rule 3).
 | T29 | An MPP `request` serialised so that two JSON parsers read different terms                                                                                     | only unpadded base64url of JCS JSON is read; duplicate keys refused; anything else is unreadable                                                                                                                                                                                                                                                                                                                                                                                                             | `mpp.test.ts`                                                                                                 |
 | T30 | An MPP seller without a `recipient` moves the realm to another operator                                                                                       | `payTo` is then `realm:<realm>`, so a realm change is `PAYTO_CHANGED` (Blocked)                                                                                                                                                                                                                                                                                                                                                                                                                              | `mpp.test.ts`                                                                                                 |
 
+## Out of scope
+
+- A compromised agent host or CI runner (it can change the lock, the digest pin and the code that calls the check).
+- A seller who serves the reviewed terms and then settles differently: paid.lock checks terms before payment; it does
+  not watch settlement (stretch: settlement audit).
+- Whether a seller is honest or its service is good: paid.lock pins terms, it does not rate sellers.
+- Facilitators, wallets and signing: paid.lock has none.
+
 ## Known gaps (tracked)
 
 - **Unmodelled extension changes** show only "extensions changed" because the lock stores the envelope hash, not its
@@ -63,3 +72,4 @@ paid.lock itself holds **no keys and moves no money** (CLAUDE.md §5 rule 3).
 - **MPP chain ids are pinned only as "other terms".** A chain id inside `methodDetails` changes as
   `TERMS_CHANGED_OTHER` (Needs your OK) until `draft-evm-charge-00` is read; owners can tighten that code to Blocked.
   Only the `charge` intent is read.
+- **CodeQL** runs only once the repository is public (AUDIT S3); Semgrep runs on every pull request.

@@ -4,6 +4,13 @@
   "private": true,
   "description": "Pure core of paid.lock: lock format, canonical hashing, diff and verdicts. No I/O.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metafrogmeme-droid/paid-lock.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/metafrogmeme-droid/paid-lock#readme",
+  "bugs": "https://github.com/metafrogmeme-droid/paid-lock/issues",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"
@@ -18,10 +25,20 @@
   "files": [
     "dist",
     "!dist/**/*.test.*",
-    "!dist/.tsbuildinfo"
+    "!dist/.tsbuildinfo",
+    "!dist/**/*.map"
   ],
   "dependencies": {
     "@noble/hashes": "^2.4.0",
     "zod": "^4.6.7"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   }
 }

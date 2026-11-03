@@ -40,7 +40,7 @@ repository settings. Status: **nothing published; the repository is private; eve
 
 1. **Release PR** (Claude prepares, owner merges): versions `0.0.0 → X.Y.Z` in the five `package.json` files and in
    `packages/cli/src/main.ts` (`VERSION`), `"private": false` on those five, and a `## X.Y.Z` section in
-   `CHANGELOG.md`. CI must be green; `node scripts/release-check.ts X.Y.Z "publish X.Y.Z"` must print OK.
+   `CHANGELOG.md` (rename `## X.Y.Z (unreleased)` to `## X.Y.Z`). CI must be green; `node scripts/release-check.ts X.Y.Z "publish X.Y.Z"` must print OK.
 2. **Publish** (owner): Actions → release → Run workflow on `main`, enter `X.Y.Z` and `publish X.Y.Z`, approve the
    `npm` environment when asked.
 3. **Check** (anyone): `npm view paid-lock@X.Y.Z` and `npm audit signatures` in a project that installs it show the

@@ -4,6 +4,13 @@
   "private": true,
   "description": "Read-only parsers for x402 v2, x402 v1 and MPP payment challenges.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metafrogmeme-droid/paid-lock.git",
+    "directory": "packages/protocols"
+  },
+  "homepage": "https://github.com/metafrogmeme-droid/paid-lock#readme",
+  "bugs": "https://github.com/metafrogmeme-droid/paid-lock/issues",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"
@@ -18,10 +25,20 @@
   "files": [
     "dist",
     "!dist/**/*.test.*",
-    "!dist/.tsbuildinfo"
+    "!dist/.tsbuildinfo",
+    "!dist/**/*.map"
   ],
   "dependencies": {
     "@paid-lock/core": "workspace:*",
     "zod": "^4.6.7"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   }
 }

@@ -4,6 +4,13 @@
   "private": true,
   "description": "Check a 402 against paid.lock at pay time, so a client hook can refuse changed terms. Never pays.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metafrogmeme-droid/paid-lock.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/metafrogmeme-droid/paid-lock#readme",
+  "bugs": "https://github.com/metafrogmeme-droid/paid-lock/issues",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"
@@ -18,7 +25,8 @@
   "files": [
     "dist",
     "!dist/**/*.test.*",
-    "!dist/.tsbuildinfo"
+    "!dist/.tsbuildinfo",
+    "!dist/**/*.map"
   ],
   "dependencies": {
     "@paid-lock/core": "workspace:*",
@@ -28,5 +36,14 @@
     "@paid-lock/mock-seller": "workspace:*",
     "@paid-lock/probe": "workspace:*",
     "paid-lock": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   }
 }
