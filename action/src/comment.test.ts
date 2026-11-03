@@ -16,7 +16,7 @@ interface Seen {
 let server: Server;
 let api: string;
 let seen: Seen[];
-let existing: { id: number; body: string }[];
+let existing: { id: number; body: string; user?: { type: string } }[];
 let status: number;
 let dir: string;
 
@@ -89,10 +89,16 @@ describe("postStickyComment", () => {
   it("updates its own earlier comment instead of adding another", async () => {
     existing = [
       { id: 1, body: "someone else" },
-      { id: 42, body: `${COMMENT_MARKER}\nold` },
+      { id: 42, body: `${COMMENT_MARKER}\nold`, user: { type: "Bot" } },
     ];
     expect(await postStickyComment(env(), "t", "new", () => undefined)).toBe("updated");
     expect(seen[1]).toMatchObject({ method: "PATCH", url: "/repos/owner/repo/issues/comments/42" });
+  });
+
+  it("never takes over a marker comment written by a person (audit L3)", async () => {
+    existing = [{ id: 7, body: `${COMMENT_MARKER}\nplanted by a user`, user: { type: "User" } }];
+    expect(await postStickyComment(env(), "t", "new", () => undefined)).toBe("created");
+    expect(seen[1]).toMatchObject({ method: "POST" });
   });
 
   it("truncates a body that is too long for a GitHub comment", async () => {

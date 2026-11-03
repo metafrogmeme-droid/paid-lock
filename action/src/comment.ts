@@ -83,9 +83,14 @@ export async function postStickyComment(
       const list = (await call(
         "GET",
         `/repos/${repo}/issues/${String(pr)}/comments?per_page=100&page=${String(page)}`,
-      )) as { id?: unknown; body?: unknown }[];
+      )) as { id?: unknown; body?: unknown; user?: { type?: unknown } | null }[];
+      // Only a bot-authored comment is ours to update: anyone can write the marker (audit L3).
       mine = list.find(
-        (c) => typeof c.body === "string" && c.body.startsWith(COMMENT_MARKER) && typeof c.id === "number",
+        (c) =>
+          typeof c.body === "string" &&
+          c.body.startsWith(COMMENT_MARKER) &&
+          typeof c.id === "number" &&
+          c.user?.type === "Bot",
       )?.id as number | undefined;
       if (list.length < 100) break;
     }

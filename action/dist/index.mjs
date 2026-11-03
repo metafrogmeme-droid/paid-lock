@@ -21375,7 +21375,13 @@ var RANGES = [
   ["reserved", "ff00::", 8, "ipv6"],
   ["reserved", "2001:db8::", 32, "ipv6"],
   ["reserved", "100::", 64, "ipv6"],
-  ["reserved", "64:ff9b:1::", 48, "ipv6"]
+  ["reserved", "64:ff9b:1::", 48, "ipv6"],
+  // Audit L1: IETF protocol assignments (Teredo 2001::/32, benchmarking, ORCHID, ...), deprecated
+  // site-local, documentation (RFC 9637) and SRv6 SIDs.
+  ["reserved", "2001::", 23, "ipv6"],
+  ["private", "fec0::", 10, "ipv6"],
+  ["reserved", "3fff::", 20, "ipv6"],
+  ["reserved", "5f00::", 16, "ipv6"]
 ];
 var LISTS = /* @__PURE__ */ new Map();
 for (const [category, network, prefix, type] of RANGES) {
@@ -21405,8 +21411,12 @@ function v4(hi, lo) {
 }
 function embeddedV4(ip) {
   const g = groups(ip);
-  if (g[0] === 100 && g[1] === 65435 && g.slice(2, 6).every((x) => x === 0)) return v4(g[6] ?? 0, g[7] ?? 0);
+  const zero = (from, to) => g.slice(from, to).every((x) => x === 0);
+  if (g[0] === 100 && g[1] === 65435 && zero(2, 6)) return v4(g[6] ?? 0, g[7] ?? 0);
   if (g[0] === 8194) return v4(g[1] ?? 0, g[2] ?? 0);
+  if (zero(0, 6) || zero(0, 4) && g[4] === 65535 && g[5] === 0 || zero(0, 5) && g[5] === 65535) {
+    return v4(g[6] ?? 0, g[7] ?? 0);
+  }
   return void 0;
 }
 function classifyAddress(ip) {
@@ -21739,7 +21749,7 @@ async function postStickyComment(env, token, markdown, log) {
         `/repos/${repo}/issues/${String(pr)}/comments?per_page=100&page=${String(page)}`
       );
       mine = list.find(
-        (c) => typeof c.body === "string" && c.body.startsWith(COMMENT_MARKER) && typeof c.id === "number"
+        (c) => typeof c.body === "string" && c.body.startsWith(COMMENT_MARKER) && typeof c.id === "number" && c.user?.type === "Bot"
       )?.id;
       if (list.length < 100) break;
     }
@@ -21759,10 +21769,17 @@ async function postStickyComment(env, token, markdown, log) {
 // action/src/render.ts
 var MD_SPECIAL = /[\\`*_{}[\]()#+\-.!|~]/g;
 function escapeMarkdown(text) {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replace(MD_SPECIAL, (c) => `\\${c}`);
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replace(MD_SPECIAL, (c) => `\\${c}`).replaceAll("@", "@&#8203;");
+}
+function breakLegacyCommands(text) {
+  return text.replaceAll("##[", "##​[");
+}
+function escapeLog(text) {
+  const broken = breakLegacyCommands(text);
+  return broken.trimStart().startsWith("::") ? `​${broken}` : broken;
 }
 function escapeCommandData(text) {
-  return text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+  return breakLegacyCommands(text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A"));
 }
 function escapeCommandProperty(text) {
   return escapeCommandData(text).replaceAll(":", "%3A").replaceAll(",", "%2C");
@@ -21865,10 +21882,10 @@ async function runAction(env, workspace, log) {
     const lockText = readFileSync3(lockPath, "utf8");
     const run = await runVerify(lock, { failOn });
     for (const r of run.results) {
-      log(r.key);
+      log(escapeLog(r.key));
       for (const line of r.findings.length === 0 ? [r.line] : r.findings.map((f) => `${f.line} [${f.code}]`))
-        log(`  ${line}`);
-      for (const n of r.notes) log(`  note: ${n}`);
+        log(`  ${escapeLog(line)}`);
+      for (const n of r.notes) log(`  note: ${escapeLog(n)}`);
     }
     const { allowed, blocked, needsOk, verdict } = run.summary;
     log(`${String(allowed)} allowed, ${String(blocked)} blocked, ${String(needsOk)} needed your OK`);
