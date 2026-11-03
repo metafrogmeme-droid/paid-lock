@@ -1,4 +1,3 @@
-// Written with AI help.
 // action.yml runs a committed bundle: if it is not tracked by git, `uses:` fails for every user.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";

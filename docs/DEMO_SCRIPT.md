@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Demo script (`pnpm demo`)
 
 Layout follows the demo-script idea of the `-claw-guard-near-` reference project: every step has an exact expected

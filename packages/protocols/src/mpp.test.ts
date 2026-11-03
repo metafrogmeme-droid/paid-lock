@@ -1,4 +1,3 @@
-// Written with AI help.
 // MPP "Payment" challenges. Field names: docs/SPEC_SOURCES.md, MPP section (draft-httpauth-payment-01,
 // draft-payment-intent-charge-00, mpp.dev/protocol/challenges, read 2 Nov 2026).
 import {

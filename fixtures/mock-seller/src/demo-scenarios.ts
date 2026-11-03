@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 // The three-endpoint seller used by `pnpm demo` and the Action self-test in CI, plus the named
 // changes both of them flip. payTo values are fake test addresses; the asset is Base Sepolia
 // (testnet) USDC from the x402 v2 spec example.
@@ -51,8 +51,7 @@ export function demoScenario(changes: Partial<Record<DemoEndpoint, DemoChange>> 
     };
   };
   return parseScenario({
-    _label:
-      "Written with AI help, test fixture. payTo values are fake test addresses; the asset is Base Sepolia (testnet) USDC.",
+    _label: "Test fixture. payTo values are fake test addresses; the asset is Base Sepolia (testnet) USDC.",
     name: "demo",
     routes: [route("forecast"), route("quote"), route("news")],
   });

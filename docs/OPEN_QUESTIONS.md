@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Open questions for the owner
 
 Recommendations are proposals until the owner answers (CLAUDE.md §7, §8).

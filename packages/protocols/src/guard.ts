@@ -1,4 +1,3 @@
-// Written with AI help.
 // Input guards for 402 data (CLAUDE.md §3 item 3): size limits, strict Base64, JSON depth <= 64 and
 // no duplicate object keys. Duplicate keys are refused because JSON parsers disagree on which value
 // wins, so a seller could show one payTo to paid.lock and another to the paying client.

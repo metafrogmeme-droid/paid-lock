@@ -1,4 +1,3 @@
-// Written with AI help.
 /**
  * The only three verdicts paid.lock ever shows (CLAUDE.md §3 item 2, §5 rule 6).
  * Every user-facing check result is produced by {@link verdictLine}.

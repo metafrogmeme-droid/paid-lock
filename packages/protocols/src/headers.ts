@@ -1,4 +1,3 @@
-// Written with AI help.
 /**
  * The x402 v2 HTTP response header that carries the Base64-encoded `PaymentRequired` object.
  * Source: x402 specs/transports-v2/http.md, "Payment Required Signaling" (see docs/SPEC_SOURCES.md).

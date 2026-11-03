@@ -1,4 +1,3 @@
-// Written with AI help.
 // The unpaid probe (CLAUDE.md §3 item 4, §5 rule 3). One plain request per sample:
 //   - only `host`, `accept`, `user-agent` (and `content-type` for a POST fixture body) are set; no
 //     cookies, no auth, never a payment header; no wallet or key anywhere in this package;

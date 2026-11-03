@@ -1,4 +1,4 @@
-// Written with AI help. Semgrep rule tests: semgrep --test .semgrep (not compiled, not shipped).
+// Semgrep rule tests: semgrep --test .semgrep (not compiled, not shipped).
 // ruleid: paid-lock-no-redirect-follow
 await fetch(url, { method: "GET", redirect: "follow" });
 // ok: paid-lock-no-redirect-follow

@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 // One MPP endpoint (/mpp) with two Payment challenges, plus the named changes the M5 acceptance check
 // needs: recipient, currency and amount changes are caught; id, expires and opaque (fresh on every
 // response) are ignored. Recipients are fake; currencies are an ISO 4217 code and a fake token address.
@@ -17,7 +17,7 @@ export interface MppChange {
 
 export function mppScenario(change: MppChange = {}): Scenario {
   return parseScenario({
-    _label: "Written with AI help, test fixture. Fake recipients and token address.",
+    _label: "Test fixture. Fake recipients and token address.",
     name: "mpp",
     routes: [
       {

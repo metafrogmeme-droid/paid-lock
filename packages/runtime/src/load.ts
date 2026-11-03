@@ -1,4 +1,3 @@
-// Written with AI help.
 // Read paid.lock for pay-time checks. The only I/O in this package. The lock is validated with the
 // same schema as the CLI uses and frozen, so the checks run against exactly what was reviewed.
 import { isIntegrity, lockDigest, MAX_LOCK_BYTES, parseLock, type Lock } from "@paid-lock/core";

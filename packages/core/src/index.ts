@@ -1,4 +1,3 @@
-// Written with AI help.
 export { normalizeAddress, toChecksumAddress, type Normalized } from "./address.ts";
 export { AMOUNT_PATTERN, applyTolerance, isAmount, MAX_TOLERANCE_BPS } from "./amount.ts";
 export { base64, INTEGRITY_PATTERN, integrityOf, isIntegrity, sha256Base64, type Integrity } from "./integrity.ts";

@@ -1,4 +1,3 @@
-// Written with AI help.
 // Stable reason codes (CLAUDE.md §3 item 2; PROTOCOL_VERSION_CHANGED added by approved P-01,
 // OPTION_REMOVED by owner decision #11 on 1 Nov 2026).
 // Every code maps to exactly one of the three verdicts; unknown codes fail closed to blocked.

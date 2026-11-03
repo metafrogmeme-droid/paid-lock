@@ -1,4 +1,3 @@
-// Written with AI help.
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 

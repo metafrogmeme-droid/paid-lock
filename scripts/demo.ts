@@ -1,4 +1,3 @@
-// Written with AI help.
 // pnpm demo (CLAUDE.md §3 item 8): mock seller on loopback, `paid-lock add` 3 endpoints, commit the lock,
 // then flip scenarios and run `paid-lock verify`. Exits non-zero on any mismatch.
 //   "0 payments sent"  = the mock seller counted 0 requests carrying a payment header;

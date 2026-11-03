@@ -1,4 +1,3 @@
-// Written with AI help.
 // `sha256-<base64>` integrity strings over RFC 8785 canonical JSON, in the style of
 // Subresource Integrity (https://www.w3.org/TR/SRI/). SHA-256 from @noble/hashes (pure, audited,
 // no dependencies; see docs/DECISIONS.md D-016), so the core stays free of Node built-ins.

@@ -1,4 +1,3 @@
-// Written with AI help.
 // Entry point of the bundled Action (action/dist/index.mjs). Never pays, never signs, needs no secret.
 import { runAction } from "./run.ts";
 

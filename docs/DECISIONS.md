@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Decisions
 
 One entry per technical choice (CLAUDE.md §0). Format: decision, why, alternatives, revisit when.
@@ -61,7 +59,7 @@ workflow dependency locking (same idea one layer down). Detailed format choices 
 
 **D-014 Mock seller: `node:http`, loopback only, no framework.** Binds only to 127.0.0.1 or ::1 (runtime check).
 Counts and rejects any request with a payment header; exits 1 at shutdown if it saw one. Scenario files are
-zod-checked and must carry the AI-help label.
+zod-checked and must carry a "test fixture" label.
 
 **D-015 Never-pays enforcement in layers.** (a) dependency allowlist, fail closed, plus a wallet/signing denylist
 that the allowlist cannot override (`scripts/lib/deps.ts`); (b) source scan of shipped code for payment

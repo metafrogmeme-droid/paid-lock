@@ -1,4 +1,3 @@
-// Written with AI help.
 // URL normalisation for endpoint keys and resource URLs (owner decision #10, 1 Nov 2026):
 // lowercase scheme and host, drop the default port, drop the fragment; the path and query are kept
 // byte for byte (no trailing-slash, dot-segment, percent-encoding or query rewriting), so any

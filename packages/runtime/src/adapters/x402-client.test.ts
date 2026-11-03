@@ -1,4 +1,3 @@
-// Written with AI help.
 import { emptyLock, endpointKey, newEndpoint, type Lock } from "@paid-lock/core";
 import { parsePaymentRequired } from "@paid-lock/protocols";
 import { describe, expect, it, vi } from "vitest";

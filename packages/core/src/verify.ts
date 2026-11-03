@@ -1,4 +1,3 @@
-// Written with AI help.
 // verify: compare a fresh observation of one endpoint with paid.lock (observed + policy).
 // Pure. Fail closed: anything unreadable or ambiguous is blocked; a locked option that vanished
 // while another appeared is treated as that option having changed (blocked), never as harmless.

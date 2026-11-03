@@ -1,4 +1,3 @@
-// Written with AI help.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { applyTolerance, isAmount, MAX_TOLERANCE_BPS } from "./amount.ts";

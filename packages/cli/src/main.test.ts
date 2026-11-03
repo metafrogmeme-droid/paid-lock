@@ -1,4 +1,3 @@
-// Written with AI help.
 import { lockDigest, parseLock } from "@paid-lock/core";
 import { parseScenario, startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -43,7 +42,7 @@ function v2(path: string, o: Opt = {}) {
 }
 function scenario(a: Opt = {}) {
   return parseScenario({
-    _label: "Written with AI help, test fixture. Fake payTo addresses; asset is Base Sepolia (testnet) USDC.",
+    _label: "Test fixture. Fake payTo addresses; asset is Base Sepolia (testnet) USDC.",
     name: "cli",
     routes: [
       v2("/a", a),
@@ -322,7 +321,7 @@ describe("update", () => {
     await initAndAdd("/a");
     seller.use(
       parseScenario({
-        _label: "Written with AI help, test fixture.",
+        _label: "Test fixture.",
         name: "broken",
         routes: [
           { method: "GET", path: "/a", respond: { kind: "raw", status: 402, headers: { "PAYMENT-REQUIRED": "%%%" } } },

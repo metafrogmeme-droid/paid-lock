@@ -1,4 +1,3 @@
-// Written with AI help.
 // paid.lock format v1 (approved P-01; spec in docs/LOCK_FORMAT.md):
 //   - per endpoint, `observed` (what the probe saw; rewritten only by `paid-lock update`) and
 //     `policy` (the owner's limits; never rewritten by the tool, only extended for new options);

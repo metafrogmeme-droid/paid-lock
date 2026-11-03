@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # paid.lock format, version 1
 
 Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid.lock.v1.schema.json`](../schemas/paid.lock.v1.schema.json)

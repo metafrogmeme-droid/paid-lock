@@ -1,4 +1,4 @@
-<!-- Written with AI help. Internal build brief. Owner: Patrick (metafrogmeme-droid). CONFIDENTIAL. -->
+<!-- Internal build brief. Owner: Patrick (metafrogmeme-droid). CONFIDENTIAL. -->
 # CLAUDE.md: paid.lock
 
 Build brief for the coding agent working in **https://github.com/metafrogmeme-droid/paid-lock**
@@ -255,7 +255,7 @@ packages/probe      unpaid HTTP probe (undici), limits, no-redirect, 2-sample st
 packages/cli        paid-lock binary
 packages/runtime    checkAgainstLock + hook adapters (M5)
 action/             GitHub Action (bundled dist committed per Actions convention; CI checks dist is fresh)
-fixtures/           mock-seller + scenario files (labelled "Written with AI help, test fixture")
+fixtures/           mock-seller + scenario files (labelled "Test fixture")
 docs/               SPEC, LOCK_FORMAT, ARCHITECTURE, THREAT_MODEL, DECISIONS, PROPOSALS, SPEC_SOURCES,
                     OPEN_QUESTIONS, AUDIT, RELEASE
 .github/workflows/ci.yml
@@ -291,7 +291,8 @@ docs/               SPEC, LOCK_FORMAT, ARCHITECTURE, THREAT_MODEL, DECISIONS, PR
 6. **Check wording is only "Blocked by your rule: …", "Allowed: within your limits", "Needs your OK: …".**
    Never the words "safe" or "scam" (or "trusted"/"verified seller" claims) in UI, docs, CLI/Action output,
    README, marketplace text or posts. copy-lint enforces it (exclude this file and third-party identifiers).
-7. **AI-written text is labelled "Written with AI help".**
+7. **No AI-disclosure labels** (owner, 1 Nov 2026; applied here 3 Nov 2026, same as Claw-Pay rule 6). Code, docs,
+   fixtures and output carry no AI-authorship header or line; copy-lint fails on them.
 8. **No token, price, presale or staking promos** anywhere. Endpoint prices in fixtures and the demo are fine.
 9. **Publishing only after the owner's go in his own words:** no `npm publish`, no GitHub Marketplace listing,
    no release tags, no making the repo public. Opus prepares `docs/RELEASE.md`, `release.yml` (manual

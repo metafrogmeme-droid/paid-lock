@@ -1,4 +1,3 @@
-// Written with AI help.
 // Usage: node scripts/copy-lint.ts [file ...]
 // No arguments: every tracked or untracked-not-ignored text file. Exit 0 clean, 1 findings, 2 usage error.
 import { existsSync, readFileSync } from "node:fs";

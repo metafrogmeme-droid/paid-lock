@@ -1,4 +1,3 @@
-// Written with AI help.
 // A PaymentRequired that an x402 client has already decoded (from the PAYMENT-REQUIRED header for
 // v2, from the JSON body for v1), as a runtime hook receives it. It goes through the same guards as
 // the raw forms: it is serialised to JSON text first, so the depth, size and schema checks are the

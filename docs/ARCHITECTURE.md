@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Architecture
 
 Pure core, adapters around it (CLAUDE.md §4).

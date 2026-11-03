@@ -1,4 +1,4 @@
-# Written with AI help. Project Semgrep rules (CLAUDE.md §0, §5 rule 3). Run with the registry
+# Project Semgrep rules (CLAUDE.md §0, §5 rule 3). Run with the registry
 # packs in CI: semgrep scan --config .semgrep --config p/javascript --config p/typescript --error
 rules:
   - id: paid-lock-no-redirect-follow

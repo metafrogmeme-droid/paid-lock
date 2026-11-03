@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// Written with AI help.
 import { createInterface } from "node:readline/promises";
 import { main } from "./main.ts";
 

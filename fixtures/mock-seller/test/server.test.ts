@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 import { networkInterfaces } from "node:os";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -87,16 +87,17 @@ describe("mock seller", () => {
     await expect(startMockSeller({ scenario, host: "0.0.0.0" })).rejects.toThrow(/loopback only/);
   });
 
-  it("rejects a scenario without the AI-help label or with unknown keys", () => {
+  it("rejects a scenario without the test-fixture label or with unknown keys", () => {
     expect(() => parseScenario({ name: "x", routes: [] })).toThrow();
-    expect(() => parseScenario({ _label: "Written with AI help", name: "x", routes: [], extra: true })).toThrow();
+    expect(() => parseScenario({ _label: "a scenario", name: "x", routes: [] })).toThrow();
+    expect(() => parseScenario({ _label: "Test fixture.", name: "x", routes: [], extra: true })).toThrow();
   });
 
   it("serves x402 v1 bodies, raw answers and delays, and can switch scenarios", async () => {
     const s = await start();
     s.use(
       parseScenario({
-        _label: "Written with AI help, test fixture.",
+        _label: "Test fixture.",
         name: "kinds",
         routes: [
           { method: "GET", path: "/v1", respond: { kind: "x402-v1", body: { x402Version: 1, url: "${origin}/v1" } } },
@@ -129,7 +130,7 @@ describe("mock seller", () => {
 
 describe("mock seller: MPP challenges (test fixture)", () => {
   const mpp = parseScenario({
-    _label: "Written with AI help, test fixture. Fake recipients; currency is an ISO 4217 code.",
+    _label: "Test fixture. Fake recipients; currency is an ISO 4217 code.",
     name: "mpp",
     routes: [
       {

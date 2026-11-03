@@ -1,4 +1,3 @@
-// Written with AI help.
 // Output of the GitHub Action: job summary (Markdown), SARIF 2.1.0 and workflow-command annotations.
 // Text from sellers (verdict details) is escaped for each format: no injected Markdown links, HTML
 // or workflow commands. Every check line stays one of the three verdict strings.

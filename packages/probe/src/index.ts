@@ -1,4 +1,3 @@
-// Written with AI help.
 export {
   DEFAULT_SAMPLES,
   DEFAULT_TIMEOUT_MS,

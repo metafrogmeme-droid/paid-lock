@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";

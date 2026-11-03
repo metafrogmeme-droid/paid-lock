@@ -1,4 +1,3 @@
-// Written with AI help.
 // Usage: node scripts/check-never-pays.ts [file ...]   Exit 0 clean, 1 hits.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

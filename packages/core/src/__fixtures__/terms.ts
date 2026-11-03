@@ -1,4 +1,4 @@
-// Written with AI help, test fixture. Fake payTo addresses; the asset is Base Sepolia (testnet) USDC
+// Test fixture. Fake payTo addresses; the asset is Base Sepolia (testnet) USDC
 // from the x402 v2 spec example. Not built or shipped (excluded in tsconfig and coverage).
 import type { ObservedTerms, PaymentOption } from "../terms.ts";
 

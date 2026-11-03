@@ -1,4 +1,3 @@
-// Written with AI help.
 // Contract test (CLAUDE.md §6, M5): the runtime library gives the same verdicts as the CLI on the
 // shared fixture set, the named /forecast changes that `pnpm demo` and the Action self-test use.
 // Loopback mock seller only; it fails the run if it ever sees a payment header.

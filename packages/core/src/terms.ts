@@ -1,4 +1,3 @@
-// Written with AI help.
 // Normalised payment terms: what the protocol parsers hand to the core, and what the lock stores.
 // Field names follow x402 v2 PaymentRequirements (docs/SPEC_SOURCES.md); the parsers map v1 onto them.
 import { normalizeAddress } from "./address.ts";

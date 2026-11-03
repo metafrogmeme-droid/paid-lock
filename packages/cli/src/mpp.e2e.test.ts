@@ -1,4 +1,3 @@
-// Written with AI help.
 // M5 acceptance (CLAUDE.md §6): MPP fixtures through the real CLI and probe against the loopback mock
 // seller. Recipient, currency and amount changes are caught; id, expires and opaque, fresh on every
 // response, are ignored (two samples per verify must agree). The mock seller sees no payment header.

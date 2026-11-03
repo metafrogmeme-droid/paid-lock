@@ -1,4 +1,3 @@
-// Written with AI help.
 // Turn an unpaid HTTP response into a core Observation. Header names are compared lowercase.
 // Precedence: a PAYMENT-REQUIRED header (x402 v2), else MPP Payment challenges in WWW-Authenticate,
 // else the x402 v1 body. A header that is present but unreadable makes the result unreadable (no

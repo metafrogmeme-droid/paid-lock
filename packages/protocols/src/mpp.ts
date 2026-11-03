@@ -1,4 +1,3 @@
-// Written with AI help.
 // Read-only MPP parser: `WWW-Authenticate: Payment` challenges of a 402 (docs/SPEC_SOURCES.md, MPP section:
 // draft-httpauth-payment-01 §5.1, draft-payment-intent-charge-00 §5, mpp.dev/protocol/challenges).
 // It never builds credentials. Mapping onto the lock's option fields: DECISIONS D-027, LOCK_FORMAT.md.

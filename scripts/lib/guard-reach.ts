@@ -1,4 +1,3 @@
-// Written with AI help.
 // Guard-reach lint (CLAUDE.md §4 reuse plan: the "is the check reached?" idea, written fresh).
 // Every pay path in the runtime adapters, i.e. a hook that lets a payment go ahead, must call one of
 // the paid.lock checks, directly or through functions defined in the same file. Static and

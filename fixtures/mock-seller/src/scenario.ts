@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 
@@ -48,7 +48,8 @@ const RouteSchema = z.strictObject({
 });
 
 export const ScenarioSchema = z.strictObject({
-  _label: z.string().includes("Written with AI help"),
+  /** Marks the file as a test fixture (e.g. "Test fixture. Fake payTo addresses ..."). */
+  _label: z.string().regex(/\btest fixture\b/iu),
   name: z.string().min(1),
   routes: z.array(RouteSchema).min(1),
 });

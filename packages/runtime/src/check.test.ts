@@ -1,4 +1,3 @@
-// Written with AI help.
 import {
   decode,
   emptyLock,

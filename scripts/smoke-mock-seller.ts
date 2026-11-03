@@ -1,4 +1,3 @@
-// Written with AI help.
 // Out-of-process smoke test of the mock seller CLI (M1 acceptance): start it on loopback, read one
 // 402, check the PAYMENT-REQUIRED header decodes to x402 v2 JSON, stop it, and require that it
 // exited 0 (it exits 1 if it ever saw a payment header). Usage: node scripts/smoke-mock-seller.ts
