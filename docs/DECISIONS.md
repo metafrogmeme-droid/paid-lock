@@ -193,3 +193,11 @@ schema; MPP entries have no `x402Version`). This is additive: existing x402 lock
   one the client will pay.
 - `WWW-Authenticate` is parsed as an RFC 9110 challenge list (Node joins repeated headers with `", "`), with token68,
   quoted-pair and duplicate-parameter handling; other schemes such as `Bearer` are ignored.
+
+**D-028 Fewer CI jobs, same checks (owner decision of 3 Nov 2026).** GitHub bills every job rounded up to a whole
+minute plus its own setup and install, and the 17 jobs per run used up the Actions budget on 2 Nov. Now 6 jobs:
+`check` (unchanged; runs every test with coverage on Node 24), `tests (node 22 and 26)` (one machine, two Node
+versions, instead of a three-job matrix whose Node 24 leg repeated `check`), `action self-test (10 cases)` (the same
+ten cases run in sequence in one machine, each with its own `uses: ./` step, and one final step that checks every
+outcome and verdict output), `gitleaks`, `workflows`, `semgrep`. No check was dropped. Triggers were already
+`push` to `main` only plus `pull_request`, so a PR push runs CI once.

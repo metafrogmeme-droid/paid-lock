@@ -94,42 +94,12 @@ jobs:
         run: pnpm audit --audit-level low
 
   action-selftest:
-    name: action self-test (${{ matrix.case }})
+    # One job runs all ten cases in sequence (one machine instead of ten; same cases and checks as the
+    # former matrix). Each case re-serves the mock seller, runs the Action from this commit and records
+    # its outcome; the last step checks every outcome and verdict output.
+    name: action self-test (10 cases)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { case: unchanged, variant: unchanged, failOn: needs-ok, outcome: success, verdict: allowed }
-          - { case: payTo swapped, variant: payto-swapped, failOn: needs-ok, outcome: failure, verdict: blocked }
-          - { case: network swapped, variant: network-swapped, failOn: needs-ok, outcome: failure, verdict: blocked }
-          - { case: price x3, variant: price-x3, failOn: needs-ok, outcome: failure, verdict: blocked }
-          - { case: price halved, variant: price-half, failOn: needs-ok, outcome: success, verdict: allowed }
-          - {
-              case: extra.version changed,
-              variant: extra-version,
-              failOn: needs-ok,
-              outcome: failure,
-              verdict: needsOk,
-            }
-          - {
-              case: extra.version changed with fail-on blocked,
-              variant: extra-version,
-              failOn: blocked,
-              outcome: success,
-              verdict: needsOk,
-            }
-          - { case: 200 unpaid, variant: unpaid-200, failOn: needs-ok, outcome: failure, verdict: needsOk }
-          - { case: garbage header, variant: garbage-header, failOn: needs-ok, outcome: failure, verdict: blocked }
-          - {
-              case: missing lock (tool error),
-              variant: unchanged,
-              failOn: needs-ok,
-              outcome: failure,
-              verdict: error,
-              lockfile: .ci/action-selftest/missing.lock,
-            }
+    timeout-minutes: 15
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -153,64 +123,213 @@ jobs:
       - name: Pin /forecast of the mock seller (loopback, opt-in recorded in the lock)
         run: node scripts/action-selftest.ts setup
 
-      - name: Switch the mock seller to the case under test
-        env:
-          VARIANT: ${{ matrix.variant }}
-        run: node scripts/action-selftest.ts serve "$VARIANT"
+      - name: "Serve case: unchanged"
+        run: node scripts/action-selftest.ts serve unchanged
 
-      - name: Run the paid-lock Action from this repository
-        id: paidlock
+      - name: "Run the Action: unchanged"
+        id: c01
         # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
         # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
         uses: ./ # zizmor: ignore[self-repository]
         continue-on-error: true
         with:
-          lockfile: ${{ matrix.lockfile || '.ci/action-selftest/paid.lock' }}
-          fail-on: ${{ matrix.failOn }}
-          sarif: .ci/action-selftest/paid-lock.sarif
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c01.sarif
 
-      - name: Check the outcome and the verdict output
+      - name: "Serve case: payTo swapped"
+        run: node scripts/action-selftest.ts serve payto-swapped
+
+      - name: "Run the Action: payTo swapped"
+        id: c02
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c02.sarif
+
+      - name: "Serve case: network swapped"
+        run: node scripts/action-selftest.ts serve network-swapped
+
+      - name: "Run the Action: network swapped"
+        id: c03
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c03.sarif
+
+      - name: "Serve case: price x3"
+        run: node scripts/action-selftest.ts serve price-x3
+
+      - name: "Run the Action: price x3"
+        id: c04
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c04.sarif
+
+      - name: "Serve case: price halved"
+        run: node scripts/action-selftest.ts serve price-half
+
+      - name: "Run the Action: price halved"
+        id: c05
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c05.sarif
+
+      - name: "Serve case: extra.version changed"
+        run: node scripts/action-selftest.ts serve extra-version
+
+      - name: "Run the Action: extra.version changed"
+        id: c06
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c06.sarif
+
+      - name: "Serve case: extra.version changed with fail-on blocked"
+        run: node scripts/action-selftest.ts serve extra-version
+
+      - name: "Run the Action: extra.version changed with fail-on blocked"
+        id: c07
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: blocked
+          sarif: .ci/action-selftest/c07.sarif
+
+      - name: "Serve case: 200 unpaid"
+        run: node scripts/action-selftest.ts serve unpaid-200
+
+      - name: "Run the Action: 200 unpaid"
+        id: c08
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c08.sarif
+
+      - name: "Serve case: garbage header"
+        run: node scripts/action-selftest.ts serve garbage-header
+
+      - name: "Run the Action: garbage header"
+        id: c09
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/paid.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c09.sarif
+
+      - name: "Serve case: missing lock (tool error)"
+        run: node scripts/action-selftest.ts serve unchanged
+
+      - name: "Run the Action: missing lock (tool error)"
+        id: c10
+        # `./` (local action at this commit) is the documented form; actionlint 1.7.12 does not yet
+        # accept the newer `$/` syntax that zizmor suggests, so that suggestion is ignored here.
+        uses: ./ # zizmor: ignore[self-repository]
+        continue-on-error: true
+        with:
+          lockfile: .ci/action-selftest/missing.lock
+          fail-on: needs-ok
+          sarif: .ci/action-selftest/c10.sarif
+
+      - name: Check every case's outcome and verdict output
+        if: always()
         env:
-          OUTCOME: ${{ steps.paidlock.outcome }}
-          VERDICT: ${{ steps.paidlock.outputs.verdict }}
-          WANT_OUTCOME: ${{ matrix.outcome }}
-          WANT_VERDICT: ${{ matrix.verdict }}
+          C01: ${{ steps.c01.outcome }}/${{ steps.c01.outputs.verdict }}
+          C02: ${{ steps.c02.outcome }}/${{ steps.c02.outputs.verdict }}
+          C03: ${{ steps.c03.outcome }}/${{ steps.c03.outputs.verdict }}
+          C04: ${{ steps.c04.outcome }}/${{ steps.c04.outputs.verdict }}
+          C05: ${{ steps.c05.outcome }}/${{ steps.c05.outputs.verdict }}
+          C06: ${{ steps.c06.outcome }}/${{ steps.c06.outputs.verdict }}
+          C07: ${{ steps.c07.outcome }}/${{ steps.c07.outputs.verdict }}
+          C08: ${{ steps.c08.outcome }}/${{ steps.c08.outputs.verdict }}
+          C09: ${{ steps.c09.outcome }}/${{ steps.c09.outputs.verdict }}
+          C10: ${{ steps.c10.outcome }}/${{ steps.c10.outputs.verdict }}
         run: |
-          echo "outcome=$OUTCOME (want $WANT_OUTCOME), verdict=$VERDICT (want $WANT_VERDICT)"
-          test "$OUTCOME" = "$WANT_OUTCOME"
-          test "$VERDICT" = "$WANT_VERDICT"
+          failed=0
+          check() {
+            if [ "$2" = "$3" ]; then echo "ok   $1: $2"; else echo "FAIL $1: got $2, want $3"; failed=1; fi
+          }
+          check "unchanged" "$C01" success/allowed
+          check "payTo swapped" "$C02" failure/blocked
+          check "network swapped" "$C03" failure/blocked
+          check "price x3" "$C04" failure/blocked
+          check "price halved" "$C05" success/allowed
+          check "extra.version changed" "$C06" failure/needsOk
+          check "extra.version changed with fail-on blocked" "$C07" success/needsOk
+          check "200 unpaid" "$C08" failure/needsOk
+          check "garbage header" "$C09" failure/blocked
+          check "missing lock (tool error)" "$C10" failure/error
+          exit "$failed"
 
       - name: Stop the mock seller (fails if it saw any payment header)
         if: always()
         run: node scripts/action-selftest.ts stop
 
-  test-matrix:
-    name: tests (node ${{ matrix.node }})
+  tests-other-node:
+    # The check job runs every test with coverage on Node 24; this job runs them on Node 22 (the oldest
+    # supported) and Node 26 (the newest) in one machine instead of a three-job matrix.
+    name: tests (node 22 and 26)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        node: ["22", "24", "26"]
+    timeout-minutes: 20
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Node ${{ matrix.node }}
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-
       - name: Set up pnpm (version from package.json "packageManager")
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
 
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Tests
-        run: pnpm test
+      - name: Tests on Node 22
+        run: node --version && pnpm test
+
+      - name: Set up Node 26
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+
+      - name: Tests on Node 26
+        run: node --version && pnpm test
 
   gitleaks:
     name: gitleaks (full history + rules self-test)
