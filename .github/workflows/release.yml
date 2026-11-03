@@ -1,0 +1,90 @@
+# Manual release to npm (CLAUDE.md §5 rule 9; steps in docs/RELEASE.md). It never runs by itself: only the owner
+# starts it (Actions > release > Run workflow) and must type "publish <version>". Gates, in order:
+#   1. the `npm` environment, where the owner is the required reviewer (configured in repository settings);
+#   2. scripts/release-check.ts: version format, the typed confirmation, every published package at that
+#      version, not private, MIT, the CLI VERSION constant and a CHANGELOG section (refuses today: all private);
+#   3. the full `pnpm check` and the demo.
+# Publishing uses npm trusted publishing (OIDC, `id-token: write`): no npm token is stored anywhere, and npm
+# adds provenance. Actions pinned by full commit SHA, the same pins as ci.yml.
+
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, e.g. 0.1.0 (must equal every published package.json version)
+        required: true
+        type: string
+      confirm:
+        description: "Type exactly: publish <version>"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    name: publish to npm (trusted publishing, provenance)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 24 (npm registry)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+
+      - name: Set up pnpm (version from package.json "packageManager")
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Release gate (version, confirmation, packages, changelog)
+        env:
+          VERSION: ${{ inputs.version }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: node scripts/release-check.ts "$VERSION" "$CONFIRM"
+
+      - name: npm supports trusted publishing (npm >= 11.5.1)
+        run: |
+          npm --version
+          node -e 'const [a,b,c]=process.argv[1].split(".").map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)' "$(npm --version)"
+
+      - name: Full check and demo
+        run: pnpm check && pnpm demo
+
+      - name: Pack (pnpm rewrites workspace:* to real versions), one folder per package
+        run: |
+          n=0
+          for dir in packages/core packages/protocols packages/probe packages/runtime packages/cli; do
+            n=$((n + 1))
+            mkdir -p ".release/$n"
+            (cd "$dir" && pnpm pack --pack-destination "$GITHUB_WORKSPACE/.release/$n")
+            test "$(find ".release/$n" -name '*.tgz' | wc -l)" -eq 1
+          done
+          find .release -name '*.tgz' -print
+
+      - name: Publish in dependency order (OIDC, provenance, public)
+        run: |
+          for n in 1 2 3 4 5; do
+            npm publish ".release/$n"/*.tgz --provenance --access public
+          done

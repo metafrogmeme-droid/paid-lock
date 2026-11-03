@@ -199,3 +199,12 @@ versions, instead of a three-job matrix whose Node 24 leg repeated `check`), `ac
 ten cases run in sequence in one machine, each with its own `uses: ./` step, and one final step that checks every
 outcome and verdict output), `gitleaks`, `workflows`, `semgrep`. No check was dropped. Triggers were already
 `push` to `main` only plus `pull_request`, so a PR push runs CI once.
+
+**D-029 Release: manual workflow, five gates, npm trusted publishing.** `.github/workflows/release.yml` runs only on
+`workflow_dispatch`, in a GitHub environment the owner approves, after `scripts/release-check.ts` (typed
+confirmation `publish <version>`, matching versions, nothing private, MIT, CLI `VERSION`, CHANGELOG section) and a
+full `pnpm check` plus demo. Packages are packed with `pnpm pack` (which rewrites `workspace:*` to real versions) and
+published with `npm publish <tarball> --provenance` through npm trusted publishing (OIDC), so no npm token exists in
+the repository or its settings, and every package carries provenance. Published in dependency order: core,
+protocols, probe, runtime, CLI. The Action is released through a GitHub release and the Marketplace, not npm. The
+workflow refuses today because every package is `"private": true`; a separate release PR flips that (docs/RELEASE.md).
