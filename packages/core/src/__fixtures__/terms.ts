@@ -31,3 +31,24 @@ export function terms(over: Partial<ObservedTerms> = {}): ObservedTerms {
     ...over,
   };
 }
+
+/** MPP terms as the MPP parser builds them (DECISIONS D-027): one option per Payment challenge. */
+export function mppTerms(over: Partial<ObservedTerms> = {}): ObservedTerms {
+  return {
+    protocol: "mpp",
+    resourceUrl: "https://api.example.com/v1/forecast",
+    options: [
+      option({
+        scheme: "charge",
+        network: "mpp:tempo",
+        asset: "0x20c0000000000000000000000000000000000000",
+        payTo: PAY_A,
+        amount: "1000000",
+        maxTimeoutSeconds: 0,
+        extra: { realm: "api.example.com", methodDetails: { chainId: 4217 } },
+      }),
+    ],
+    envelope: {},
+    ...over,
+  };
+}

@@ -15,7 +15,7 @@ Recommendations are proposals until the owner answers (CLAUDE.md §7, §8).
 | 7   | Visibility, CLAUDE.md                      | Public at 0.1.0 (Marketplace needs it; CodeQL becomes free). CLAUDE.md is marked confidential and names internal repos: move it to private notes before going public.                                        |
 | 8   | Signed locks                               | After real users. P-04 (lock digest) is a cheap step towards it now.                                                                                                                                         |
 | A   | Empty repo: no `main` to open a PR against | Resolved 1 Nov 2026: `main` starts with the brief commit `d4bcecd` ("docs: add build brief (CLAUDE.md)"); M1 is a draft PR from `m1-scaffold`.                                                               |
-| B   | MPP sources                                | mpp.dev and paymentauth.org were blocked by the build environment's network policy. Either allow those hosts for M5 or paste the docs (URL + revision) into a DECISIONS entry.                               |
+| B   | MPP sources                                | Answered 2 Nov 2026: the owner pasted the excerpts (SPEC_SOURCES, MPP section). Still to fetch: draft-evm-charge-00 for EVM `methodDetails`.                                                                 |
 | C   | Reason-code enum                           | P-01 adds `PROTOCOL_VERSION_CHANGED`. Also: should `RESOURCE_URL_MISMATCH` compare origin + path only (query and trailing-slash differences become Needs your OK) instead of Blocked on any byte difference? |
 
 **Answered 1 Nov 2026:** the owner approved recommendations 1-11 (rows 1-8, B, C and `OPTION_REMOVED`), with the M3

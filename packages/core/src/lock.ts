@@ -39,13 +39,17 @@ const LockedOptionSchema = z.strictObject({
   integrity: IntegrityString,
 });
 
-const ObservedSchema = z.strictObject({
-  protocol: z.literal("x402"),
-  x402Version: z.int().positive(),
+const observedFields = {
   resourceUrl: z.url(),
   envelopeIntegrity: IntegrityString,
   options: z.record(z.string(), LockedOptionSchema),
-});
+};
+
+/** x402 terms pin the protocol version; MPP terms have none (DECISIONS D-027). */
+const ObservedSchema = z.discriminatedUnion("protocol", [
+  z.strictObject({ protocol: z.literal("x402"), x402Version: z.int().positive(), ...observedFields }),
+  z.strictObject({ protocol: z.literal("mpp"), ...observedFields }),
+]);
 
 const PolicySchema = z.strictObject({
   options: z.record(z.string(), z.strictObject({ maxAmount: Amount })),
@@ -118,13 +122,14 @@ export function emptyLock(): Lock {
 
 /** Observed block from normalised terms (see normalizeTerms). */
 export function observedFrom(t: ObservedTerms): LockedObserved {
-  return {
-    protocol: t.protocol,
-    x402Version: t.x402Version,
+  const common = {
     resourceUrl: t.resourceUrl,
     envelopeIntegrity: integrityOf(t.envelope),
     options: Object.fromEntries(t.options.map((o) => [optionId(o), { ...o, integrity: optionIntegrity(o) }])),
   };
+  if (t.protocol === "mpp") return { protocol: "mpp", ...common };
+  if (t.x402Version === undefined) throw new RangeError("x402 terms need an x402Version (normalizeTerms checks this)");
+  return { protocol: "x402", x402Version: t.x402Version, ...common };
 }
 
 /** A new endpoint entry (`paid-lock add`): policy maxAmount = observed amount + tolerance. */

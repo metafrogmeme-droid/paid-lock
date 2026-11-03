@@ -1,7 +1,7 @@
 // Written with AI help.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
+import { mppTerms, option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
 import { emptyLock, endpointKey, newEndpoint, type Lock } from "./lock.ts";
 import { normalizeTerms, optionId, type ObservedTerms, type PaymentOption } from "./terms.ts";
 import {
@@ -401,5 +401,18 @@ describe("verifyUnpinned (what paid-lock add checks)", () => {
 
   it("needs at least one sample", () => {
     expect(() => verifyUnpinned(KEY, [])).toThrow(RangeError);
+  });
+});
+
+describe("verifyEndpoint: MPP (D-027)", () => {
+  it("allows unchanged MPP terms", () => {
+    expect(verifyEndpoint(lockOf(mppTerms()), KEY, live(mppTerms())).verdict).toBe("allowed");
+  });
+
+  it("an endpoint that switches between x402 and MPP needs your OK for the protocol and is blocked for the new option", () => {
+    const r = verifyEndpoint(lockOf(), KEY, live(mppTerms()));
+    expect(r.findings.map((f) => f.code)).toContain("PROTOCOL_VERSION_CHANGED");
+    expect(r.findings.find((f) => f.code === "PROTOCOL_VERSION_CHANGED")?.line).toContain("(x402 v2 -> mpp)");
+    expect(r.verdict).toBe("blocked");
   });
 });

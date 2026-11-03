@@ -20582,6 +20582,13 @@ function normalizeOption(o) {
   return { ok: true, option: { ...o, asset: asset.value, payTo: payTo.value } };
 }
 function normalizeTerms(t) {
+  if (t.protocol === "mpp" && t.x402Version !== void 0) {
+    return { ok: false, reason: "x402Version is only valid for x402" };
+  }
+  const v = t.x402Version;
+  if (t.protocol === "x402" && (v === void 0 || !Number.isSafeInteger(v) || v < 1)) {
+    return { ok: false, reason: "x402Version must be a positive integer" };
+  }
   const url2 = normalizeUrl(t.resourceUrl);
   if (!url2.ok) return { ok: false, reason: `resource URL: ${url2.reason}` };
   const resourceUrl = url2.value;
@@ -20620,13 +20627,15 @@ var LockedOptionSchema = external_exports.strictObject({
   otherFields: JsonRecord,
   integrity: IntegrityString
 });
-var ObservedSchema = external_exports.strictObject({
-  protocol: external_exports.literal("x402"),
-  x402Version: external_exports.int().positive(),
+var observedFields = {
   resourceUrl: external_exports.url(),
   envelopeIntegrity: IntegrityString,
   options: external_exports.record(external_exports.string(), LockedOptionSchema)
-});
+};
+var ObservedSchema = external_exports.discriminatedUnion("protocol", [
+  external_exports.strictObject({ protocol: external_exports.literal("x402"), x402Version: external_exports.int().positive(), ...observedFields }),
+  external_exports.strictObject({ protocol: external_exports.literal("mpp"), ...observedFields })
+]);
 var PolicySchema = external_exports.strictObject({
   options: external_exports.record(external_exports.string(), external_exports.strictObject({ maxAmount: Amount })),
   tighten: external_exports.array(external_exports.enum(TIGHTENABLE)).optional(),
@@ -20743,6 +20752,9 @@ var Collector = class {
     };
   }
 };
+function protocolLabel(t) {
+  return t.protocol === "mpp" ? "mpp" : `x402 v${String(t.x402Version)}`;
+}
 function sharedIdentity(a, b) {
   return IDENTITY.filter((f) => a[f] === b[f]).length;
 }
@@ -20765,11 +20777,8 @@ function verifyEndpoint(lock, key, obs) {
   const t = readableTerms(c, obs);
   if (t === void 0) return c.result(key);
   const locked = ep.observed;
-  if (t.x402Version !== locked.x402Version) {
-    c.add(
-      "PROTOCOL_VERSION_CHANGED",
-      change(`${locked.protocol} v${String(locked.x402Version)}`, `${t.protocol} v${String(t.x402Version)}`)
-    );
+  if (protocolLabel(t) !== protocolLabel(locked)) {
+    c.add("PROTOCOL_VERSION_CHANGED", change(protocolLabel(locked), protocolLabel(t)));
   }
   if (t.resourceUrl !== locked.resourceUrl) c.add("RESOURCE_URL_MISMATCH", change(locked.resourceUrl, t.resourceUrl));
   if (integrityOf(t.envelope) !== locked.envelopeIntegrity) c.add("TERMS_CHANGED_OTHER", "(extensions changed)");
@@ -20962,6 +20971,187 @@ function v1NetworkToCaip2(name) {
 }
 var V1_NETWORK_NAMES = [...Object.keys(EVM_CHAIN_IDS), ...Object.keys(SVM)];
 
+// packages/protocols/src/mpp.ts
+var MAX_CHALLENGES = 64;
+var TCHAR = /[!#$%&'*+\-.^_`|~0-9A-Za-z]/u;
+var TOKEN68 = /^[A-Za-z0-9\-._~+/]+=*/u;
+function parseChallenges(header) {
+  const fail = (reason) => ({ ok: false, reason: `WWW-Authenticate: ${reason}` });
+  let i = 0;
+  const ows = () => {
+    while (header[i] === " " || header[i] === "	") i += 1;
+  };
+  const token = () => {
+    const start = i;
+    while (i < header.length && TCHAR.test(header.charAt(i))) i += 1;
+    return header.slice(start, i);
+  };
+  const paramAhead = () => {
+    let j = i;
+    while (j < header.length && TCHAR.test(header.charAt(j))) j += 1;
+    if (j === i) return false;
+    while (header[j] === " " || header[j] === "	") j += 1;
+    return header[j] === "=";
+  };
+  const quoted = () => {
+    let out = "";
+    i += 1;
+    while (i < header.length) {
+      const ch = header.charAt(i);
+      if (ch === '"') {
+        i += 1;
+        return out;
+      }
+      if (ch === "\\") {
+        i += 1;
+        if (i >= header.length) break;
+      }
+      const code = header.charCodeAt(i);
+      if (code < 32 && code !== 9 || code === 127) return fail("control character in a quoted string");
+      out += header.charAt(i);
+      i += 1;
+    }
+    return fail("unterminated quoted string");
+  };
+  const challenges = [];
+  for (; ; ) {
+    while (header[i] === "," || header[i] === " " || header[i] === "	") i += 1;
+    if (i >= header.length) break;
+    if (challenges.length >= MAX_CHALLENGES) return fail("too many challenges");
+    const scheme = token();
+    if (scheme === "") return fail("expected an auth-scheme");
+    const c = { scheme: scheme.toLowerCase(), params: {} };
+    challenges.push(c);
+    if (header[i] !== " " && header[i] !== "	") {
+      if (i < header.length && header[i] !== ",") return fail("expected a space after the auth-scheme");
+      continue;
+    }
+    ows();
+    const t68 = TOKEN68.exec(header.slice(i));
+    if (t68 !== null) {
+      let j = i + t68[0].length;
+      while (header[j] === " " || header[j] === "	") j += 1;
+      if (j >= header.length || header[j] === ",") {
+        c.token68 = t68[0];
+        i = j;
+        continue;
+      }
+    }
+    for (; ; ) {
+      if (i >= header.length || header[i] === ",") break;
+      const name = token().toLowerCase();
+      if (name === "") return fail("expected an auth-param name");
+      ows();
+      if (header[i] !== "=") return fail(`expected "=" after ${name.slice(0, 40)}`);
+      i += 1;
+      ows();
+      let value;
+      if (header[i] === '"') {
+        const q = quoted();
+        if (typeof q !== "string") return q;
+        value = q;
+      } else {
+        value = token();
+        if (value === "") return fail(`missing value for ${name.slice(0, 40)}`);
+      }
+      if (Object.hasOwn(c.params, name)) return fail(`duplicate auth-param ${name.slice(0, 40)}`);
+      c.params[name] = value;
+      ows();
+      if (i >= header.length) break;
+      if (header[i] !== ",") return fail("expected a comma between auth-params");
+      let k = i;
+      while (header[k] === "," || header[k] === " " || header[k] === "	") k += 1;
+      const save = i;
+      i = k;
+      if (!paramAhead()) {
+        i = save;
+        break;
+      }
+    }
+  }
+  return { ok: true, challenges };
+}
+var ChargeRequest = external_exports.looseObject({
+  amount: external_exports.string(),
+  currency: external_exports.string().min(1),
+  recipient: external_exports.string().min(1).optional(),
+  description: external_exports.string().optional(),
+  externalId: external_exports.string().optional(),
+  methodDetails: external_exports.record(external_exports.string(), external_exports.json()).optional()
+});
+var NOT_TERMS = /* @__PURE__ */ new Set(["amount", "currency", "recipient", "description", "externalId", "methodDetails"]);
+var METHOD = /^[a-z0-9_-]{1,32}$/u;
+var BASE64URL_NOPAD = /^[A-Za-z0-9_-]+$/u;
+function decodeRequest(value) {
+  if (!BASE64URL_NOPAD.test(value) || value.length % 4 === 1) {
+    return { ok: false, reason: "MPP request is not unpadded base64url" };
+  }
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - value.length % 4) % 4);
+  const decoded = decodeBase64Strict(padded, MAX_HEADER_BYTES);
+  if (!decoded.ok) return { ok: false, reason: `MPP request: ${decoded.reason}` };
+  const json2 = parseJsonGuarded(decoded.text, MAX_HEADER_BYTES);
+  if (!json2.ok) return { ok: false, reason: `MPP request: ${json2.reason}` };
+  if (!isJsonObject(json2.value)) return { ok: false, reason: "MPP request is not a JSON object" };
+  if (canonicalize(json2.value) !== decoded.text) return { ok: false, reason: "MPP request is not JCS (RFC 8785)" };
+  return { ok: true, request: json2.value };
+}
+function toOption(c) {
+  if (c.token68 !== void 0) return { ok: false, reason: "MPP challenge has token68 instead of auth-params" };
+  const p = c.params;
+  for (const name of ["id", "realm", "method", "intent", "request"]) {
+    if (!p[name]) return { ok: false, reason: `MPP challenge has no ${name}` };
+  }
+  const { realm = "", method = "", intent = "", request = "" } = p;
+  if (!METHOD.test(method)) return { ok: false, reason: "MPP method is not a lowercase ASCII identifier" };
+  if (intent !== "charge")
+    return { ok: false, reason: `MPP intent "${intent.slice(0, 40)}" is not one paid.lock reads` };
+  const decoded = decodeRequest(request);
+  if (!decoded.ok) return decoded;
+  const r = ChargeRequest.safeParse(decoded.request);
+  if (!r.success) {
+    const first = r.error.issues[0];
+    return {
+      ok: false,
+      reason: `MPP charge request: ${first ? `${first.path.join(".") || "(root)"} ${first.message}` : "invalid"}`
+    };
+  }
+  const otherFields = Object.fromEntries(Object.entries(decoded.request).filter(([k]) => !NOT_TERMS.has(k)));
+  return {
+    ok: true,
+    option: {
+      scheme: intent,
+      network: `mpp:${method}`,
+      asset: r.data.currency,
+      // Without a recipient the money goes to whoever runs the realm: pin the realm in its place (D-027).
+      payTo: r.data.recipient ?? `realm:${realm}`,
+      amount: r.data.amount,
+      maxTimeoutSeconds: 0,
+      paymentFlow: "authorization",
+      assetTransferMethod: null,
+      extra: { realm, ...r.data.methodDetails === void 0 ? {} : { methodDetails: r.data.methodDetails } },
+      otherFields
+    }
+  };
+}
+function readMpp(header, requestUrl) {
+  if (new TextEncoder().encode(header).length > MAX_HEADER_BYTES) {
+    return { kind: "unreadable", reason: "WWW-Authenticate is too large" };
+  }
+  const parsed = parseChallenges(header);
+  if (!parsed.ok) {
+    return /(^|[\s,])payment(\s|,|$)/iu.test(header) ? { kind: "unreadable", reason: parsed.reason } : { kind: "none" };
+  }
+  const payment = parsed.challenges.filter((c) => c.scheme === "payment");
+  if (payment.length === 0) return { kind: "none" };
+  const options = [];
+  for (const c of payment) {
+    const o = toOption(c);
+    if (!o.ok) return { kind: "unreadable", reason: o.reason };
+    options.push(o.option);
+  }
+  return { kind: "terms", terms: { protocol: "mpp", resourceUrl: requestUrl, options, envelope: {} } };
+}
+
 // packages/protocols/src/x402.ts
 var MAX_OPTIONS = 64;
 var JsonRecord2 = external_exports.record(external_exports.string(), external_exports.json());
@@ -21145,11 +21335,18 @@ function fromV1Json(value) {
 function toObservation(r) {
   return r.ok ? { kind: "terms", terms: r.terms } : { kind: "unreadable", reason: r.reason };
 }
+var BOTH = { kind: "unreadable", reason: "the response offers both x402 and MPP payment terms" };
 function observe402(res) {
   if (res.status !== 402) return { kind: "not402", status: res.status };
   const header = res.headers[X402_V2_PAYMENT_REQUIRED_HEADER.toLowerCase()];
-  if (header !== void 0) return toObservation(parseX402V2Header(header));
-  return toObservation(parseX402V1Body(res.body));
+  const auth = res.headers["www-authenticate"];
+  const mpp = auth === void 0 ? { kind: "none" } : readMpp(auth, res.url ?? "");
+  if (header !== void 0) return mpp.kind === "none" ? toObservation(parseX402V2Header(header)) : BOTH;
+  if (mpp.kind === "none") return toObservation(parseX402V1Body(res.body));
+  if (res.body.trim() !== "" && parseX402V1Body(res.body).ok) return BOTH;
+  if (mpp.kind === "unreadable") return { kind: "unreadable", reason: mpp.reason };
+  if (res.url === void 0) return { kind: "unreadable", reason: "MPP terms need the request URL" };
+  return { kind: "terms", terms: mpp.terms };
 }
 
 // packages/probe/src/address-policy.ts

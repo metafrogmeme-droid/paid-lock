@@ -27,8 +27,10 @@ export interface PaymentOption {
 }
 
 export interface ObservedTerms {
-  protocol: "x402";
-  x402Version: number;
+  /** x402 (v2 header or v1 body) or MPP (`WWW-Authenticate: Payment` challenges, DECISIONS D-027). */
+  protocol: "x402" | "mpp";
+  /** x402 only: the pinned protocol version. MPP terms have none. */
+  x402Version?: number;
   resourceUrl: string;
   options: PaymentOption[];
   /** Extensions with per-request fields removed, plus unknown top-level fields (set by the parser). */
@@ -91,6 +93,13 @@ function normalizeOption(o: PaymentOption): { ok: true; option: PaymentOption } 
  * REQUIREMENTS_UNREADABLE upstream.
  */
 export function normalizeTerms(t: ObservedTerms): NormalizeResult {
+  if (t.protocol === "mpp" && t.x402Version !== undefined) {
+    return { ok: false, reason: "x402Version is only valid for x402" };
+  }
+  const v = t.x402Version;
+  if (t.protocol === "x402" && (v === undefined || !Number.isSafeInteger(v) || v < 1)) {
+    return { ok: false, reason: "x402Version must be a positive integer" };
+  }
   const url = normalizeUrl(t.resourceUrl);
   if (!url.ok) return { ok: false, reason: `resource URL: ${url.reason}` };
   const resourceUrl = url.value;
