@@ -7,6 +7,13 @@
 export const BANNED =
   /\b(?:safe(?:ly|st|r)?|scam(?:s|mer|mers|my)?|trusted|trustworthy|verified[ -]sellers?|presale|pre-sale|staking|airdrops?|token sale)\b/giu;
 
+/**
+ * Third-party identifiers that contain a banned word but make no claim about a seller (CLAUDE.md §5 rule 6
+ * exempts them): npm's "trusted publishing" / "Trusted Publisher" feature, named in the release runbook.
+ * Removed from a line before the banned-word scan; nothing else is exempt.
+ */
+const THIRD_PARTY_NAMES = /\btrusted publish(?:ing|ers?)\b/giu;
+
 /** Files never scanned for banned words. */
 export const SKIP_FILES = new Set(["CLAUDE.md", "LICENSE", "pnpm-lock.yaml", "scripts/lib/copy-lint.ts"]);
 
@@ -37,7 +44,7 @@ export function lintText(file: string, text: string): Finding[] {
   const findings: Finding[] = [];
   const lines = text.split("\n");
   lines.forEach((content, i) => {
-    for (const m of content.matchAll(BANNED)) {
+    for (const m of content.replace(THIRD_PARTY_NAMES, "").matchAll(BANNED)) {
       findings.push({ file, line: i + 1, message: `banned word "${m[0]}"` });
     }
     if (AI_LABEL.test(content)) {
