@@ -58,7 +58,7 @@ export function demoScenario(changes: Partial<Record<DemoEndpoint, DemoChange>> 
   });
 }
 
-/** Named single-endpoint changes (on /forecast), as used by the Action self-test matrix in CI. */
+/** Named single-endpoint changes (on /forecast), as used by the Action self-test job in CI. */
 export const FORECAST_VARIANTS: Readonly<Record<string, DemoChange | undefined>> = {
   unchanged: undefined,
   "payto-swapped": { payTo: SWAPPED_PAY_TO },
