@@ -1,5 +1,4 @@
-// Written with AI help.
-// copy-lint (CLAUDE.md §5 rules 6, 7, 8). Design follows the copy-lint idea of the
+// copy-lint (CLAUDE.md §5 rules 6, 7, 8; rule 7 now bans AI-authorship labels, owner decision of 3 Nov 2026). Design follows the copy-lint idea of the
 // -claw-guard-near- reference repo (three verdict strings, banned words); code written fresh.
 // This file holds the banned list, so it is the one file the scan skips (plus CLAUDE.md,
 // which quotes the rules, and generated or legal files).
@@ -14,11 +13,12 @@ export const SKIP_FILES = new Set(["CLAUDE.md", "LICENSE", "pnpm-lock.yaml", "sc
 /** Text files the scan reads, by extension. */
 const TEXT_EXT = /\.(?:md|ts|js|mjs|cjs|json|ya?ml|toml|sh|txt)$/u;
 
-/** Files whose first lines must carry the AI-help label (rule 7). */
-const LABEL_EXT = /\.(?:md|ts|js|mjs|cjs|sh|ya?ml|toml)$/u;
-const LABEL_EXEMPT = new Set(["pnpm-lock.yaml"]);
-const LABEL_TEXT = "Written with AI help";
-const LABEL_WINDOW = 5;
+/**
+ * AI-authorship labels (CLAUDE.md §5 rule 7, owner decision of 3 Nov 2026, same as Claw-Pay's rule 6):
+ * code, docs, fixtures and output carry no such header or line.
+ */
+export const AI_LABEL =
+  /\b(?:written with ai help|ai[- ](?:generated|written|authored)|(?:generated|written) (?:by|with) (?:ai|an ai)\b)/iu;
 
 export interface Finding {
   file: string;
@@ -32,13 +32,6 @@ export function isScanned(file: string): boolean {
   return (TEXT_EXT.test(file) || file.startsWith(".githooks/")) && !SKIP_FILES.has(file);
 }
 
-function needsLabel(file: string): boolean {
-  if (LABEL_EXEMPT.has(file) || SKIP_FILES.has(file)) return false;
-  if (file.startsWith(".githooks/")) return true;
-  if (/(?:^|\/)scenarios\/[^/]+\.json$/u.test(file)) return true;
-  return LABEL_EXT.test(file);
-}
-
 /** Lint one file's text. Pure: no I/O. */
 export function lintText(file: string, text: string): Finding[] {
   const findings: Finding[] = [];
@@ -47,13 +40,9 @@ export function lintText(file: string, text: string): Finding[] {
     for (const m of content.matchAll(BANNED)) {
       findings.push({ file, line: i + 1, message: `banned word "${m[0]}"` });
     }
+    if (AI_LABEL.test(content)) {
+      findings.push({ file, line: i + 1, message: "AI-authorship label (none allowed, owner decision of 3 Nov 2026)" });
+    }
   });
-  if (needsLabel(file) && !lines.slice(0, LABEL_WINDOW).some((l) => l.includes(LABEL_TEXT))) {
-    findings.push({
-      file,
-      line: 1,
-      message: `missing "${LABEL_TEXT}" label in the first ${String(LABEL_WINDOW)} lines`,
-    });
-  }
   return findings;
 }

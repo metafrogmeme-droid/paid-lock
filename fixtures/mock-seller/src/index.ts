@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 export { loadScenario, parseScenario, ScenarioSchema, type Route, type Scenario } from "./scenario.ts";
 export {
   carriesPayment,

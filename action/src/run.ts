@@ -1,4 +1,3 @@
-// Written with AI help.
 // The GitHub Action (CLAUDE.md §3 item 6): runs the same verify as `paid-lock verify` and reports
 // it as a job summary, SARIF, annotations and step outputs. Needs no secret and no write permission.
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";

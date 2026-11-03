@@ -1,4 +1,3 @@
-// Written with AI help.
 import { emptyLock, endpointKey, integrityOf, newEndpoint, normalizeTerms, verifyEndpoint } from "@paid-lock/core";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";

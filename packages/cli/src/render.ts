@@ -1,4 +1,3 @@
-// Written with AI help.
 // Text output. Every check result is one of the three verdict strings (CLAUDE.md §5 rule 6).
 import type { EndpointResult, Summary } from "@paid-lock/core";
 

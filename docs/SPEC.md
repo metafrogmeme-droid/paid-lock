@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # paid-lock: commands, verdicts, exit codes
 
 Lock file format: [LOCK_FORMAT.md](LOCK_FORMAT.md). paid-lock never pays, never signs and never loads a key; every

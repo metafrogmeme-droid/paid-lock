@@ -1,4 +1,3 @@
-// Written with AI help.
 import { describe, expect, it } from "vitest";
 import { checkGuardReach, isAdapterFile } from "../scripts/lib/guard-reach.ts";
 import { runScript } from "./run.ts";

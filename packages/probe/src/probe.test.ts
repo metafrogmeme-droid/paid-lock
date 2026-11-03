@@ -1,4 +1,3 @@
-// Written with AI help.
 import { parseScenario, startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
 import { createServer } from "node:net";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -14,7 +13,7 @@ const acceptsV1 = [
 ];
 
 const scenario = parseScenario({
-  _label: "Written with AI help, test fixture. Fake payTo; asset is Base Sepolia (testnet) USDC.",
+  _label: "Test fixture. Fake payTo; asset is Base Sepolia (testnet) USDC.",
   name: "probe-tests",
   routes: [
     {
@@ -219,7 +218,7 @@ describe("address policy (owner decision, 2 Nov 2026)", () => {
   it("treats duplicate PAYMENT-REQUIRED headers as unreadable (Node joins them)", async () => {
     seller.use(
       parseScenario({
-        _label: "Written with AI help, test fixture.",
+        _label: "Test fixture.",
         name: "dup",
         routes: [
           {

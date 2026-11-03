@@ -1,4 +1,3 @@
-// Written with AI help.
 // Never-pays source scan (CLAUDE.md §5 rule 3b). The request-side payment header names and
 // wallet/signing calls must not appear in shipped code. The names live only here, in the mock
 // seller (which detects them) and in tests that plant them.

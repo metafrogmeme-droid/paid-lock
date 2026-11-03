@@ -1,4 +1,3 @@
-// Written with AI help.
 // Usage: node scripts/check-guard-reach.ts   Exit 0 when every adapter pay path reaches a check, 1 otherwise.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

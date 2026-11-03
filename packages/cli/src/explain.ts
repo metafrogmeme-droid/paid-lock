@@ -1,4 +1,3 @@
-// Written with AI help.
 import type { ReasonCode } from "@paid-lock/core";
 
 /** Longer help for `paid-lock explain <code>`. */

@@ -1,4 +1,3 @@
-// Written with AI help.
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { parseLock, serializeLock, type Lock } from "@paid-lock/core";
 

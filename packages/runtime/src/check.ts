@@ -1,4 +1,3 @@
-// Written with AI help.
 // Pay-time check against paid.lock (CLAUDE.md §3 item 9). No I/O: the lock is passed in (see
 // load.ts) and the 402 comes from the client that is about to pay. It reads payment terms only; it
 // never pays, signs or loads a key. Same core verify as the CLI and the Action, so a 402 gets the

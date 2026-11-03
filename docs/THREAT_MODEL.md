@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Threat model (v1, M2)
 
 Structure follows the threat-model layout of the `-claw-guard-near-` reference project (assets, actors, threats with

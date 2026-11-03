@@ -1,4 +1,3 @@
-// Written with AI help.
 // The verify run shared by the CLI and the GitHub Action, so both give identical results.
 import {
   endpointKey,

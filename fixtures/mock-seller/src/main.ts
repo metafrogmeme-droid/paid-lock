@@ -1,4 +1,4 @@
-// Written with AI help, test fixture.
+// Test fixture.
 // Usage: node fixtures/mock-seller/src/main.ts [scenario.json] [--port N]
 // Prints `mock-seller listening <origin>` and serves until SIGINT/SIGTERM, then prints its stats
 // as JSON and exits 1 if any request carried a payment header (CLAUDE.md §5 rule 3c).

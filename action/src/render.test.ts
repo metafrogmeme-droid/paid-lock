@@ -1,4 +1,3 @@
-// Written with AI help.
 import type { EndpointResult, Summary } from "@paid-lock/core";
 import { describe, expect, it } from "vitest";
 import {

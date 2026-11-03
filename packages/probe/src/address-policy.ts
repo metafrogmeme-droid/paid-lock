@@ -1,4 +1,3 @@
-// Written with AI help.
 // Which addresses the probe may connect to (owner decision, 2 Nov 2026): private, link-local,
 // loopback and other special-purpose ranges are refused unless the lock entry opts in with
 // policy.allowPrivateNetwork. Every DNS answer is checked, and the probe connects only to the

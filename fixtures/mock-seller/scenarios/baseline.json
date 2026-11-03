@@ -1,5 +1,5 @@
 {
-  "_label": "Written with AI help, test fixture. payTo values are fake test addresses, not real wallets. The asset is the Base Sepolia (testnet) USDC contract from the x402 v2 spec example (eip155:84532).",
+  "_label": "Test fixture. payTo values are fake test addresses, not real wallets. The asset is the Base Sepolia (testnet) USDC contract from the x402 v2 spec example (eip155:84532).",
   "name": "baseline",
   "routes": [
     {

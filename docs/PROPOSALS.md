@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Proposals
 
 Ideas only until the owner approves them (CLAUDE.md §0). Status: **open** unless marked.

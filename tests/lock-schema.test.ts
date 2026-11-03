@@ -1,4 +1,3 @@
-// Written with AI help.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderSchema, SCHEMA_PATH } from "../scripts/gen-lock-schema.ts";

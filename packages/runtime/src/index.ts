@@ -1,4 +1,3 @@
-// Written with AI help.
 export {
   installPaidLock,
   PaidLockHookError,

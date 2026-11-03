@@ -1,4 +1,3 @@
-// Written with AI help.
 // Usage: node scripts/check-deps.ts   Exit 0 clean, 1 problems, 2 tool error.
 // Reads the installed production dependency trees from `pnpm ls` and applies scripts/lib/deps.ts.
 import { execFileSync } from "node:child_process";

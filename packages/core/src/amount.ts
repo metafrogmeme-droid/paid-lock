@@ -1,4 +1,3 @@
-// Written with AI help.
 // Amounts are atomic-unit decimal strings compared as bigint, never floats (CLAUDE.md §3 item 1).
 
 /** Decimal digits, no sign, no leading zeros, at most 78 digits (fits uint256). */

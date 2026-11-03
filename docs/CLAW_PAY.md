@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Claw Pay integration note (design only)
 
 How Claw Pay's gate can enforce `paid.lock` at pay time with `@paid-lock/runtime`. This is a design note: no code

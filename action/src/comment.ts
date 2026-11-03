@@ -1,4 +1,3 @@
-// Written with AI help.
 // Optional sticky PR comment (CLAUDE.md §3 item 6; input `comment`, default false). Best effort:
 // any failure is a warning and never changes the verdict. Needs `pull-requests: write` in the
 // workflow when enabled; the token is sent only to GITHUB_API_URL and never logged.

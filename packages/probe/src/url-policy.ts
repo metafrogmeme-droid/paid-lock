@@ -1,4 +1,3 @@
-// Written with AI help.
 /** Thrown when a URL may not be probed. The message never echoes credentials, so it can be printed. */
 export class ProbeUrlError extends Error {
   override readonly name = "ProbeUrlError";

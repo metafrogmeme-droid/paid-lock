@@ -1,4 +1,3 @@
-// Written with AI help.
 // Helper for the Action self-test job in CI (.github/workflows/ci.yml, job action-selftest).
 // Keeps a mock seller running on 127.0.0.1:4021 across workflow steps and checks, every time it
 // stops one, that the seller saw 0 payment headers.

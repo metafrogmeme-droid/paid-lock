@@ -1,4 +1,3 @@
-// Written with AI help.
 import { describe, expect, it } from "vitest";
 import { X402_V2_PAYMENT_REQUIRED_HEADER } from "./headers.ts";
 

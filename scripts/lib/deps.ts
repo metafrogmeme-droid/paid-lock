@@ -1,4 +1,3 @@
-// Written with AI help.
 // Dependency allowlist for the packages that probe, decide or ship (CLAUDE.md §5 rule 3a).
 // Fail closed: every production dependency (transitive) of a guarded package must be on the
 // allowlist; known wallet / signing / payment-client libraries get a specific message.

@@ -1,4 +1,3 @@
-// Written with AI help.
 // x402 v1 network names -> CAIP-2 (CLAUDE.md §2: explicit, tested table; unknown name -> unreadable).
 // Source, x402-foundation/x402 @ e208bd39030be35a0f807eb3bf4f043354273866 (docs/SPEC_SOURCES.md):
 //   EVM: typescript/packages/mechanisms/evm/src/constants.ts, EVM_NETWORK_CHAIN_ID_MAP (name -> chain id)

@@ -1,4 +1,3 @@
-// Written with AI help.
 // Writes schemas/paid.lock.v1.schema.json from the zod schema in packages/core/src/lock.ts.
 // Usage: node scripts/gen-lock-schema.ts   (tests/lock-schema.test.ts fails if the file is stale)
 import { writeFileSync } from "node:fs";

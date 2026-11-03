@@ -1,4 +1,3 @@
-// Written with AI help.
 import { describe, expect, it } from "vitest";
 import { checkResolved, classifyAddress, hostLiteral } from "./address-policy.ts";
 

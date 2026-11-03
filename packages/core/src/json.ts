@@ -1,4 +1,3 @@
-// Written with AI help.
 /** A JSON value as parsed by `JSON.parse` (I-JSON subset is enforced by the canonicaliser). */
 export type Json = null | boolean | number | string | Json[] | JsonObject;
 export interface JsonObject {

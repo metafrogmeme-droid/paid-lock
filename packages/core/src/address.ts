@@ -1,4 +1,3 @@
-// Written with AI help.
 // Address normalisation (CLAUDE.md §3 item 1): EVM addresses on eip155 networks are compared
 // case-insensitively and stored EIP-55 checksummed (https://eips.ethereum.org/EIPS/eip-55);
 // everything else (non-EVM addresses, role constants, ISO 4217 codes) is kept and compared exactly.

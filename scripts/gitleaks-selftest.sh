@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Written with AI help. Self-test for .gitleaks.toml (CLAUDE.md §5 rule 2).
+# Self-test for .gitleaks.toml (CLAUDE.md §5 rule 2).
 # All key-shaped values are random, made at run time in a temp dir; nothing key-shaped is committed.
 # Checks: an EVM private key in .env, JSON and TS forms and a 12-word mnemonic are reported; a
 # public EVM address and a bare 32-byte hash (tx hash, digest) without a key name are not.

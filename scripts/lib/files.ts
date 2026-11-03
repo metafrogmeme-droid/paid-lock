@@ -1,4 +1,3 @@
-// Written with AI help.
 import { execFileSync } from "node:child_process";
 
 /** Tracked and untracked-but-not-ignored files of the repo at `root`, repo-relative. */

@@ -1,4 +1,3 @@
-// Written with AI help.
 // Read-only x402 parsers. Field names trace to docs/SPEC_SOURCES.md (x402 @ e208bd3):
 //   v2: specs/x402-specification-v2.md §5.1 + specs/transports-v2/http.md (PAYMENT-REQUIRED header, Base64)
 //   v1: specs/x402-specification-v1.md §5.1 + specs/transports-v1/http.md (JSON body)

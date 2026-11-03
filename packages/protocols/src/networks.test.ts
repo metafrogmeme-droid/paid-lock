@@ -1,4 +1,3 @@
-// Written with AI help.
 import { describe, expect, it } from "vitest";
 import { V1_NETWORK_NAMES, v1NetworkToCaip2 } from "./networks.ts";
 

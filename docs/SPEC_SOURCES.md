@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # Spec sources
 
 Every protocol field name in code must trace to a row here (CLAUDE.md §2). If the live docs differ from

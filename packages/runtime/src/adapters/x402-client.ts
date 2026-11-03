@@ -1,4 +1,3 @@
-// Written with AI help.
 // Adapter for the official x402 TypeScript client (@x402/core, x402-foundation/x402 @ e208bd3:
 // typescript/packages/core/src/client/x402Client.ts and src/http/x402HTTPClient.ts). Structural
 // types only: this package does not depend on the x402 SDK, and it never pays, signs or loads a key.

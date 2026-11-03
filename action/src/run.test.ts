@@ -1,4 +1,3 @@
-// Written with AI help.
 import { parseScenario, startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,7 +10,7 @@ const PAY_A = "0x0000000000000000000000000000000000001001";
 const PAY_B = "0x0000000000000000000000000000000000002002";
 const scenario = (payTo: string) =>
   parseScenario({
-    _label: "Written with AI help, test fixture. Fake payTo; asset is Base Sepolia (testnet) USDC.",
+    _label: "Test fixture. Fake payTo; asset is Base Sepolia (testnet) USDC.",
     name: "action",
     routes: [
       {

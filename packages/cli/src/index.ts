@@ -1,4 +1,3 @@
-// Written with AI help.
 export { EXPLAIN } from "./explain.ts";
 export { CliError, readLock } from "./files.ts";
 export { main, VERSION, type Io } from "./main.ts";

@@ -1,4 +1,3 @@
-// Written with AI help.
 import { describe, expect, it } from "vitest";
 import { checkPackage, WALLET_LIKE, type DepNode } from "../scripts/lib/deps.ts";
 

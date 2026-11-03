@@ -1,4 +1,4 @@
-# Written with AI help. CI for paid.lock (CLAUDE.md §0, §5, §6 M1).
+# CI for paid.lock (CLAUDE.md §0, §5, §6 M1).
 #
 # Local fixtures only: the mock seller on loopback. No live endpoint, no repository secret, no key.
 # The only token is the read-only GITHUB_TOKEN (`permissions: contents: read`); checkout does not
@@ -69,7 +69,7 @@ jobs:
       - name: Tests with coverage gate (core >= 95% lines and branches)
         run: pnpm test:coverage
 
-      - name: copy-lint (three verdict strings, banned words, AI-help labels)
+      - name: copy-lint (three verdict strings, banned words, no AI-authorship labels)
         run: pnpm copy-lint
 
       - name: Dependency allowlist (no wallet or signing library in probe, cli, core, protocols)

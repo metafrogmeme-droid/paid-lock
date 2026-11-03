@@ -1,4 +1,3 @@
-// Written with AI help.
 // paid-lock CLI (CLAUDE.md §3 item 5). Probes unpaid, never pays, never signs, never loads a key.
 import { parseArgs } from "node:util";
 import {

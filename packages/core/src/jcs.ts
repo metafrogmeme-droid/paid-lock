@@ -1,4 +1,3 @@
-// Written with AI help.
 // RFC 8785 JSON Canonicalization Scheme (https://www.rfc-editor.org/rfc/rfc8785).
 // Strings and numbers use the ECMAScript serialisation the RFC is defined by (JSON.stringify);
 // object keys are sorted by UTF-16 code units; input must be I-JSON (no lone surrogates).

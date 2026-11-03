@@ -1,5 +1,3 @@
-<!-- Written with AI help. -->
-
 # paid.lock
 
 A lockfile for the paid endpoints your AI agent calls. Like `package-lock.json`, but for money: `paid.lock`
