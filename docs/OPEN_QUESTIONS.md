@@ -16,5 +16,7 @@ Recommendations are proposals until the owner answers (CLAUDE.md §7, §8).
 | B   | MPP sources                                | Answered 2 Nov 2026: the owner pasted the excerpts (SPEC_SOURCES, MPP section). Still to fetch: draft-evm-charge-00 for EVM `methodDetails`.                                                                 |
 | C   | Reason-code enum                           | P-01 adds `PROTOCOL_VERSION_CHANGED`. Also: should `RESOURCE_URL_MISMATCH` compare origin + path only (query and trailing-slash differences become Needs your OK) instead of Blocked on any byte difference? |
 
+| D | Claw Pay: paid.lock per seller, and its Needs your OK | Answered 3 Nov 2026: on for every seller by default, owner can turn it off per seller (logged in the receipt), stricter outcome wins; Needs your OK goes into Claw Pay's one owner OK queue with the reason code and the locked and new value (DECISIONS D-030, docs/CLAW_PAY.md). |
+
 **Answered 1 Nov 2026:** the owner approved recommendations 1-11 (rows 1-8, B, C and `OPTION_REMOVED`), with the M3
 defaults recorded in DECISIONS D-018.

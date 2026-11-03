@@ -110,6 +110,60 @@ describe("verifyEndpoint: blocked", () => {
     expect(f?.line).toBe(`Blocked by your rule: payTo changed since paid.lock (${PAY_A} -> ${PAY_B})`);
   });
 
+  // Claw Pay's owner-OK queue shows the reason code with the locked and the new value (owner, 3 Nov 2026),
+  // so they are data on the finding, not only text inside the line.
+  it.each<[string, Partial<PaymentOption>, string, { locked: string; new: string }]>([
+    ["payTo", { payTo: PAY_B }, "PAYTO_CHANGED", { locked: PAY_A, new: PAY_B }],
+    ["network", { network: "eip155:8453" }, "NETWORK_CHANGED", { locked: "eip155:84532", new: "eip155:8453" }],
+    [
+      "asset",
+      { asset: OTHER_ASSET },
+      "ASSET_CHANGED",
+      { locked: USDC_TESTNET, new: normalizeOk(option({ asset: OTHER_ASSET })).asset },
+    ],
+    ["scheme", { scheme: "upto" }, "SCHEME_CHANGED", { locked: "exact", new: "upto" }],
+    ["price (locked = the maximum)", { amount: "30000" }, "PRICE_ABOVE_LOCK", { locked: "10000", new: "30000" }],
+    ["payment flow", { paymentFlow: "upfront" }, "PAYMENT_FLOW_CHANGED", { locked: "authorization", new: "upfront" }],
+  ])("a changed %s carries the locked and the new value", (_name, over, code, values) => {
+    const [f] = verifyEndpoint(lockOf(), KEY, withOption(over)).findings;
+    expect([f?.code, f?.change]).toEqual([code, values]);
+  });
+
+  it("the price change compares against the locked maximum, not the observed price", () => {
+    const [f] = verifyEndpoint(lockOf(terms(), 1000), KEY, withOption({ amount: "30000" })).findings;
+    expect(f?.change).toEqual({ locked: "11000", new: "30000" });
+  });
+
+  it("carries the locked and new value for a protocol switch and a resource URL change", () => {
+    const other = "https://api.example.com/v2/forecast";
+    const r = verifyEndpoint(lockOf(), KEY, live(terms({ x402Version: 1, resourceUrl: other })));
+    expect(r.findings.map((f) => [f.code, f.change])).toEqual([
+      ["PROTOCOL_VERSION_CHANGED", { locked: "x402 v2", new: "x402 v1" }],
+      ["RESOURCE_URL_MISMATCH", { locked: URL, new: other }],
+    ]);
+  });
+
+  it("has no value pair when there is no single value to compare", () => {
+    const changedOther = verifyEndpoint(lockOf(), KEY, withOption({ maxTimeoutSeconds: 30 }));
+    const added = verifyEndpoint(
+      lockOf(),
+      KEY,
+      live(terms({ options: [option(), option({ payTo: PAY_B, asset: OTHER_ASSET, network: "eip155:1" })] })),
+    );
+    const missing = notInLock("GET https://api.example.com/other");
+    for (const r of [changedOther, added, missing]) {
+      expect(r.findings.length).toBeGreaterThan(0);
+      for (const f of r.findings) expect(f).not.toHaveProperty("change");
+    }
+  });
+
+  it("clips long seller values in the pair the same way as in the line", () => {
+    const long = `${URL}/${"x".repeat(300)}`;
+    const [f] = verifyEndpoint(lockOf(), KEY, live(terms({ resourceUrl: long }))).findings;
+    expect(f?.change).toEqual({ locked: URL, new: `${long.slice(0, 120)}...` });
+    expect(f?.line).toContain(`-> ${long.slice(0, 120)}...)`);
+  });
+
   it("the resource URL in the 402 differs", () => {
     expect(codes(lockOf(), live(terms({ resourceUrl: "https://evil.example/v1/forecast" })))).toEqual([
       "RESOURCE_URL_MISMATCH",
@@ -307,6 +361,8 @@ describe("properties", () => {
         const r = verifyEndpoint(lockOf(), KEY, withOption({ payTo }));
         expect(r.verdict).toBe("blocked");
         expect(r.findings.map((f) => f.code)).toContain("PAYTO_CHANGED");
+        const f = r.findings.find((x) => x.code === "PAYTO_CHANGED");
+        expect(f?.change).toEqual({ locked: PAY_A, new: normalizeOk(option({ payTo })).payTo });
       }),
     );
   });

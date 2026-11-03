@@ -66,6 +66,21 @@ describe("checkAgainstLock", () => {
     expect(r.detail.startsWith("Blocked by your rule: payTo changed since paid.lock")).toBe(true);
   });
 
+  it("gives the locked and new value of the reason, for an owner-OK queue entry", () => {
+    expect(checkAgainstLock(lockFor(), "GET", URL_, pr({ payTo: OTHER_PAY })).change).toEqual({
+      locked: PAY,
+      new: OTHER_PAY,
+    });
+    const price = checkAgainstLock(lockFor(), "GET", URL_, pr({ amount: "10001" }));
+    expect([price.code, price.change]).toEqual(["PRICE_ABOVE_LOCK", { locked: "10000", new: "10001" }]);
+    const ok = checkAgainstLock(lockFor(), "GET", URL_, pr());
+    const other = checkAgainstLock(lockFor(), "GET", URL_, pr({ maxTimeoutSeconds: 30 }));
+    expect([ok, other].map((r) => [r.code, "change" in r])).toEqual([
+      ["OK", false],
+      ["TERMS_CHANGED_OTHER", false],
+    ]);
+  });
+
   it.each([
     ["network", { network: "eip155:8453" }, "NETWORK_CHANGED"],
     ["asset", { asset: "0x0000000000000000000000000000000000000bad" }, "ASSET_CHANGED"],

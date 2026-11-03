@@ -12,6 +12,7 @@ import {
   type Method,
   type Observation,
   type ReasonCode,
+  type ValueChange,
   type Verdict,
   verdictLine,
 } from "@paid-lock/core";
@@ -25,6 +26,11 @@ export interface LockCheck {
   code: ReasonCode;
   /** One line, always one of the three verdict strings. Fit to show to the user as is. */
   detail: string;
+  /**
+   * The locked and the new value behind `code`, when it compares one value (e.g. PAYTO_CHANGED,
+   * PRICE_ABOVE_LOCK with the locked maximum). For an owner-OK queue entry; absent otherwise.
+   */
+  change?: ValueChange;
   findings: readonly Finding[];
   /** Information that changes no verdict, e.g. a price drop. */
   notes: readonly string[];
@@ -43,7 +49,15 @@ function keyOf(method: string, url: string): string | undefined {
 
 function toCheck(r: EndpointResult): LockCheck {
   const reason = r.findings.find((f) => f.verdict === r.verdict);
-  return { verdict: r.verdict, code: reason?.code ?? "OK", detail: r.line, findings: r.findings, notes: r.notes };
+  const check: LockCheck = {
+    verdict: r.verdict,
+    code: reason?.code ?? "OK",
+    detail: r.line,
+    findings: r.findings,
+    notes: r.notes,
+  };
+  if (reason?.change !== undefined) check.change = reason.change;
+  return check;
 }
 
 /** The same result without some findings: verdict, code and line recomputed from the rest. */

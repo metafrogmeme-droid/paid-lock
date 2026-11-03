@@ -54,16 +54,21 @@ unpaid request ─▶ 402 ─┬─ Claw Pay: parseV2Header / parseV1Body ─▶
 3. **Parser differences fail closed.** paid.lock refuses some inputs Claw Pay's parser accepts (for example
    duplicate JSON keys, where parsers disagree on which value wins). Then paid.lock says
    `REQUIREMENTS_UNREADABLE`, the stricter outcome is Blocked, and no payment is made.
-4. **Owner OK.** A paid.lock "Needs your OK" can go to Claw Pay's owner OK queue like `NEEDS_OWNER_OK`. Approving
+4. **Owner OK (owner decision, 3 Nov 2026).** A paid.lock "Needs your OK" goes to Claw Pay's existing owner OK queue
+   like `NEEDS_OWNER_OK`; there is one queue and no second approval flow. The queue entry is tagged with the
+   paid.lock reason (`check.code`, e.g. `PRICE_ABOVE_LOCK`) and, where the code compares one value, the locked and new
+   value (`check.change`, `{ locked, new }`; for a price, `locked` is the locked maximum; D-030). Approving
    it allows that one payment; it does not change `paid.lock` (that stays a reviewed `paid-lock update` in the
    agent's repo). A paid.lock "Blocked" is never cleared by an owner OK, matching Claw Pay's rule that approval
    clears only `NEEDS_OWNER_OK`, never a block.
 5. **Receipts.** Record both codes, e.g. `{ clawPay: "OK", paidLock: "TERMS_CHANGED_OTHER" }`, plus the lock
-   digest (`paid-lock digest`), so a receipt says which reviewed lock the payment was checked against.
+   digest (`paid-lock digest`), so a receipt says which reviewed lock the payment was checked against. When the
+   owner has turned paid.lock off for the seller, the receipt says so instead of a paid.lock code (point 6).
 6. **Which lock.** The gate loads the agent repo's `paid.lock` once at start-up with
    `loadLock(path, { expectedDigest })`, the digest set at deploy time (P-04). An endpoint that is not in the lock
-   is Blocked (`NOT_IN_LOCK`); if Claw Pay wants paid.lock as an optional layer, the gate can skip it per seller,
-   but that choice belongs in Claw Pay's rules, not in paid.lock.
+   is Blocked (`NOT_IN_LOCK`). **Owner decision, 3 Nov 2026:** the gate checks paid.lock for every seller by
+   default; the owner can turn it off per seller in Claw Pay's rules, and each receipt logs that it was off. That
+   switch lives in Claw Pay, not in paid.lock. Both gates run from Claw Pay's M3; the stricter outcome wins (point 2).
 7. **If the gate uses the `@x402/core` client.** `installPaidLock({ client, http }, lock)` registers the two hooks
    directly and aborts the payment with the verdict line. That is the simplest path, but it runs separately from
    `decide()`: an abort from either stops the payment, and the owner OK queue would not see paid.lock's "Needs your
@@ -85,8 +90,9 @@ dependency-light parser package could serve both (normalised fields for rules, r
 Trade-offs: one place to fix parser bugs and one fuzz corpus, against coupling two release cycles before either
 has users. Cost about 1.5 days, risk medium (two consumers). Better after both have shipped 0.1.0; the owner decides.
 
-## Open questions for the owner
+## Owner decisions (3 Nov 2026)
 
-1. Should the stricter-outcome rule apply to every seller, or should paid.lock be optional per seller in Claw Pay's
-   rules?
-2. Should a paid.lock "Needs your OK" go to Claw Pay's owner OK queue, or block until `paid.lock` is updated?
+1. paid.lock is checked for every seller by default; the owner can turn it off per seller, logged in the receipt.
+   Both gates run in Claw Pay's M3 and the stricter outcome wins (points 2, 5 and 6).
+2. A paid.lock "Needs your OK" goes into Claw Pay's existing owner OK queue, tagged with the paid.lock reason and the
+   locked and new value. One queue, no second approval flow (point 4, DECISIONS D-030).

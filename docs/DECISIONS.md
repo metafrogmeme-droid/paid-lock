@@ -208,3 +208,14 @@ published with `npm publish <tarball> --provenance` through npm trusted publishi
 the repository or its settings, and every package carries provenance. Published in dependency order: core,
 protocols, probe, runtime, CLI. The Action is released through a GitHub release and the Marketplace, not npm. The
 workflow refuses today because every package is `"private": true`; a separate release PR flips that (docs/RELEASE.md).
+
+**D-030 Claw Pay integration answers; locked and new value as data (owner decisions of 3 Nov 2026).** The owner
+answered the two questions in docs/CLAW_PAY.md: (1) Claw Pay checks paid.lock for every seller by default; the owner
+can turn it off per seller, and that choice is logged in the receipt; both gates run in Claw Pay's M3 and the
+stricter outcome wins. (2) A paid.lock "Needs your OK" goes into Claw Pay's existing owner-OK queue, tagged with the
+paid.lock reason code and the locked and new value; one queue, no second approval flow. For (2), every finding that
+compares one value now carries `change: { locked, new }` (core `Finding`, runtime `LockCheck`, `verify --json`), so
+the queue does not parse the verdict line. For `PRICE_ABOVE_LOCK`, `locked` is the locked maximum, because that is
+the limit the price went over. Codes without one value to compare (`TERMS_CHANGED_OTHER`, `NEW_OPTION_OFFERED`,
+`OPTION_REMOVED`, `NOT_IN_LOCK`, unreadable, not 402, timeout) have no `change`. Additive: no verdict, code or line
+changes.
