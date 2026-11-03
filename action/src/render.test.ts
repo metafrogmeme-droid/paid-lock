@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   escapeCommandData,
   escapeCommandProperty,
+  escapeLog,
   escapeMarkdown,
   lineOfKey,
   renderSarif,
@@ -112,5 +113,19 @@ describe("renderSarif", () => {
 
   it("has no results when everything is allowed", () => {
     expect((renderSarif([allowed], "paid.lock", LOCK, "0.0.0") as typeof sarif).runs[0]?.results).toEqual([]);
+  });
+});
+
+describe("seller text cannot mention people or forge workflow commands (audit L2)", () => {
+  it("breaks @mentions in Markdown so a seller's payTo cannot notify a user or team", () => {
+    const out = escapeMarkdown("payTo changed (A -> @octocat)");
+    expect(out).not.toMatch(/@[a-z]/u);
+    expect(out).toContain("@&#8203;octocat");
+  });
+
+  it("breaks the legacy ##[ command syntax in log lines and annotation messages", () => {
+    const evil = "(A -> x##[set-output name=verdict;]allowed)";
+    expect(escapeLog(evil)).not.toContain("##[");
+    expect(escapeCommandData(evil)).not.toContain("##[");
   });
 });

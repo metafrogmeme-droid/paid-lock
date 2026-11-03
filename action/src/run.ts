@@ -5,7 +5,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { ProbeUrlError } from "@paid-lock/probe";
 import { CliError, EXIT, isFailOn, readLock, runVerify, VERSION } from "paid-lock";
 import { postStickyComment } from "./comment.ts";
-import { renderAnnotations, renderSarif, renderSummaryMarkdown } from "./render.ts";
+import { escapeLog, renderAnnotations, renderSarif, renderSummaryMarkdown } from "./render.ts";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -36,10 +36,10 @@ export async function runAction(env: Env, workspace: string, log: (line: string)
 
     const run = await runVerify(lock, { failOn });
     for (const r of run.results) {
-      log(r.key);
+      log(escapeLog(r.key));
       for (const line of r.findings.length === 0 ? [r.line] : r.findings.map((f) => `${f.line} [${f.code}]`))
-        log(`  ${line}`);
-      for (const n of r.notes) log(`  note: ${n}`);
+        log(`  ${escapeLog(line)}`);
+      for (const n of r.notes) log(`  note: ${escapeLog(n)}`);
     }
     const { allowed, blocked, needsOk, verdict } = run.summary;
     log(`${String(allowed)} allowed, ${String(blocked)} blocked, ${String(needsOk)} needed your OK`);

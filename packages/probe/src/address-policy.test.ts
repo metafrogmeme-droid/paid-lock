@@ -43,6 +43,17 @@ describe("classifyAddress: IPv6", () => {
     ["::ffff:c0a8:1", "private"],
     ["64:ff9b::a9fe:a9fe", "link-local"],
     ["2002:0a00:0001::1", "private"],
+    // Audit L1: deprecated IPv4-compatible and IPv4-translated forms, Teredo and other IETF protocol
+    // assignments (2001::/23), site-local, and the newer documentation and SRv6 ranges.
+    ["::7f00:1", "loopback"],
+    ["::a9fe:a9fe", "link-local"],
+    ["::ffff:0:7f00:1", "loopback"],
+    ["::ffff:0:a00:1", "private"],
+    ["2001::1", "reserved"],
+    ["2001:0:4136:e378:8000:63bf:3fff:fdd2", "reserved"],
+    ["fec0::1", "private"],
+    ["3fff::1", "reserved"],
+    ["5f00::1", "reserved"],
   ])("refuses %s (%s)", (ip, category) => {
     expect(classifyAddress(ip)).toEqual({ allowed: false, category });
   });
