@@ -26,6 +26,17 @@ export interface Finding {
   option?: string;
   /** Set on the finding that reports two identical requests seeing different terms. */
   tag?: "unstable-samples";
+  /**
+   * The locked and the new value, when the finding compares one value (identity fields, payment flow,
+   * protocol, resource URL; for PRICE_ABOVE_LOCK `locked` is the locked maximum). Seller text is clipped
+   * as in `line`. For an owner-OK queue entry (docs/CLAW_PAY.md).
+   */
+  change?: ValueChange;
+}
+
+export interface ValueChange {
+  locked: string;
+  new: string;
 }
 
 export interface EndpointResult {
@@ -57,6 +68,10 @@ function change(before: string, after: string): string {
   return `(${clip(before)} -> ${clip(after)})`;
 }
 
+function pair(locked: string, now: string): ValueChange {
+  return { locked: clip(locked), new: clip(now) };
+}
+
 class Collector {
   readonly findings: Finding[] = [];
   readonly notes: string[] = [];
@@ -65,14 +80,20 @@ class Collector {
     this.tighten = tighten;
   }
 
-  add(code: ReasonCode, extra?: string, option?: string, tag?: Finding["tag"]): void {
+  add(code: ReasonCode, extra?: string, option?: string, tag?: Finding["tag"], values?: ValueChange): void {
     const base = REASONS[code];
     const verdict: Verdict = base.verdict === "needsOk" && this.tighten.includes(code) ? "blocked" : base.verdict;
     const detail = extra === undefined ? base.detail : `${base.detail} ${extra}`;
     const finding: Finding = { code, verdict, line: verdictLine(verdict, detail) };
     if (option !== undefined) finding.option = option;
     if (tag !== undefined) finding.tag = tag;
+    if (values !== undefined) finding.change = values;
     this.findings.push(finding);
+  }
+
+  /** A finding about one value that changed: the line shows `(locked -> new)`, `change` holds both. */
+  changed(code: ReasonCode, locked: string, now: string, option?: string): void {
+    this.add(code, change(locked, now), option, undefined, pair(locked, now));
   }
 
   result(key: string): EndpointResult {
@@ -97,11 +118,12 @@ function sharedIdentity(a: PaymentOption, b: PaymentOption): number {
 }
 
 function compareOptions(c: Collector, locked: PaymentOption, seen: PaymentOption, maxAmount: string, id: string): void {
-  if (BigInt(seen.amount) > BigInt(maxAmount)) c.add("PRICE_ABOVE_LOCK", `(${clip(seen.amount)} > ${maxAmount})`, id);
+  if (BigInt(seen.amount) > BigInt(maxAmount))
+    c.add("PRICE_ABOVE_LOCK", `(${clip(seen.amount)} > ${maxAmount})`, id, undefined, pair(maxAmount, seen.amount));
   else if (BigInt(seen.amount) < BigInt(locked.amount))
     c.notes.push(`price dropped for ${id} ${change(locked.amount, seen.amount)}`);
   if (seen.paymentFlow !== locked.paymentFlow)
-    c.add("PAYMENT_FLOW_CHANGED", change(locked.paymentFlow, seen.paymentFlow), id);
+    c.changed("PAYMENT_FLOW_CHANGED", locked.paymentFlow, seen.paymentFlow, id);
   const changed = OTHER_FIELDS.filter((f) => canonicalize(locked[f] as Json) !== canonicalize(seen[f] as Json));
   if (changed.length > 0) c.add("TERMS_CHANGED_OTHER", `(changed: ${changed.join(", ")})`, id);
 }
@@ -118,9 +140,9 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
   const locked = ep.observed;
   // A switch between x402 versions, or between x402 and MPP, needs your OK (approved P-01, D-027).
   if (protocolLabel(t) !== protocolLabel(locked)) {
-    c.add("PROTOCOL_VERSION_CHANGED", change(protocolLabel(locked), protocolLabel(t)));
+    c.changed("PROTOCOL_VERSION_CHANGED", protocolLabel(locked), protocolLabel(t));
   }
-  if (t.resourceUrl !== locked.resourceUrl) c.add("RESOURCE_URL_MISMATCH", change(locked.resourceUrl, t.resourceUrl));
+  if (t.resourceUrl !== locked.resourceUrl) c.changed("RESOURCE_URL_MISMATCH", locked.resourceUrl, t.resourceUrl);
   if (integrityOf(t.envelope) !== locked.envelopeIntegrity) c.add("TERMS_CHANGED_OTHER", "(extensions changed)");
 
   const lockedById = new Map(Object.entries(locked.options));
@@ -149,7 +171,7 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
       c.add("NEW_OPTION_OFFERED", `(${clip(optionId(seen))})`, optionId(seen));
       continue;
     }
-    for (const f of IDENTITY) if (was[f] !== seen[f]) c.add(IDENTITY_CODE[f], change(was[f], seen[f]), optionId(was));
+    for (const f of IDENTITY) if (was[f] !== seen[f]) c.changed(IDENTITY_CODE[f], was[f], seen[f], optionId(was));
   }
   for (const was of unmatchedLocked) c.add("OPTION_REMOVED", `(${clip(optionId(was))})`, optionId(was));
   return c.result(key);
@@ -237,7 +259,7 @@ export function verifyUnpinned(key: string, samples: readonly Observation[]): En
     const probeOnly = new Collector([]);
     const t = readableTerms(probeOnly, s);
     if (t !== undefined && t.resourceUrl !== requested) {
-      probeOnly.add("RESOURCE_URL_MISMATCH", change(requested, t.resourceUrl));
+      probeOnly.changed("RESOURCE_URL_MISMATCH", requested, t.resourceUrl);
     }
     for (const f of probeOnly.findings) {
       if (!seen.has(f.line)) {

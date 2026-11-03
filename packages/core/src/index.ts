@@ -47,4 +47,5 @@ export {
   type Finding,
   type Observation,
   type Summary,
+  type ValueChange,
 } from "./verify.ts";

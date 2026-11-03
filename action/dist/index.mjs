@@ -20757,6 +20757,9 @@ function clip(value) {
 function change(before, after) {
   return `(${clip(before)} -> ${clip(after)})`;
 }
+function pair(locked, now) {
+  return { locked: clip(locked), new: clip(now) };
+}
 var Collector = class {
   findings = [];
   notes = [];
@@ -20764,14 +20767,19 @@ var Collector = class {
   constructor(tighten) {
     this.tighten = tighten;
   }
-  add(code, extra, option, tag) {
+  add(code, extra, option, tag, values) {
     const base = REASONS[code];
     const verdict = base.verdict === "needsOk" && this.tighten.includes(code) ? "blocked" : base.verdict;
     const detail = extra === void 0 ? base.detail : `${base.detail} ${extra}`;
     const finding = { code, verdict, line: verdictLine(verdict, detail) };
     if (option !== void 0) finding.option = option;
     if (tag !== void 0) finding.tag = tag;
+    if (values !== void 0) finding.change = values;
     this.findings.push(finding);
+  }
+  /** A finding about one value that changed: the line shows `(locked -> new)`, `change` holds both. */
+  changed(code, locked, now, option) {
+    this.add(code, change(locked, now), option, void 0, pair(locked, now));
   }
   result(key) {
     const worst = this.findings.reduce((v, f) => RANK[f.verdict] > RANK[v] ? f.verdict : v, "allowed");
@@ -20792,11 +20800,12 @@ function sharedIdentity(a, b) {
   return IDENTITY.filter((f) => a[f] === b[f]).length;
 }
 function compareOptions(c, locked, seen, maxAmount, id) {
-  if (BigInt(seen.amount) > BigInt(maxAmount)) c.add("PRICE_ABOVE_LOCK", `(${clip(seen.amount)} > ${maxAmount})`, id);
+  if (BigInt(seen.amount) > BigInt(maxAmount))
+    c.add("PRICE_ABOVE_LOCK", `(${clip(seen.amount)} > ${maxAmount})`, id, void 0, pair(maxAmount, seen.amount));
   else if (BigInt(seen.amount) < BigInt(locked.amount))
     c.notes.push(`price dropped for ${id} ${change(locked.amount, seen.amount)}`);
   if (seen.paymentFlow !== locked.paymentFlow)
-    c.add("PAYMENT_FLOW_CHANGED", change(locked.paymentFlow, seen.paymentFlow), id);
+    c.changed("PAYMENT_FLOW_CHANGED", locked.paymentFlow, seen.paymentFlow, id);
   const changed = OTHER_FIELDS.filter((f) => canonicalize(locked[f]) !== canonicalize(seen[f]));
   if (changed.length > 0) c.add("TERMS_CHANGED_OTHER", `(changed: ${changed.join(", ")})`, id);
 }
@@ -20811,9 +20820,9 @@ function verifyEndpoint(lock, key, obs) {
   if (t === void 0) return c.result(key);
   const locked = ep.observed;
   if (protocolLabel(t) !== protocolLabel(locked)) {
-    c.add("PROTOCOL_VERSION_CHANGED", change(protocolLabel(locked), protocolLabel(t)));
+    c.changed("PROTOCOL_VERSION_CHANGED", protocolLabel(locked), protocolLabel(t));
   }
-  if (t.resourceUrl !== locked.resourceUrl) c.add("RESOURCE_URL_MISMATCH", change(locked.resourceUrl, t.resourceUrl));
+  if (t.resourceUrl !== locked.resourceUrl) c.changed("RESOURCE_URL_MISMATCH", locked.resourceUrl, t.resourceUrl);
   if (integrityOf(t.envelope) !== locked.envelopeIntegrity) c.add("TERMS_CHANGED_OTHER", "(extensions changed)");
   const lockedById = new Map(Object.entries(locked.options));
   const unmatchedLive = [];
@@ -20839,7 +20848,7 @@ function verifyEndpoint(lock, key, obs) {
       c.add("NEW_OPTION_OFFERED", `(${clip(optionId(seen))})`, optionId(seen));
       continue;
     }
-    for (const f of IDENTITY) if (was[f] !== seen[f]) c.add(IDENTITY_CODE[f], change(was[f], seen[f]), optionId(was));
+    for (const f of IDENTITY) if (was[f] !== seen[f]) c.changed(IDENTITY_CODE[f], was[f], seen[f], optionId(was));
   }
   for (const was of unmatchedLocked) c.add("OPTION_REMOVED", `(${clip(optionId(was))})`, optionId(was));
   return c.result(key);

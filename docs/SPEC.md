@@ -75,12 +75,17 @@ the Action (DECISIONS D-023). It never pays, signs or loads a key, and it makes 
 | Function                                                      | Returns / does                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `loadLock(path = "paid.lock", { expectedDigest })`            | The validated, deep-frozen lock. Throws `LockLoadError` (with `errors` from the schema) when the file is missing, too large or invalid, or when `expectedDigest` is given and the lock's digest differs (P-04). A given but empty, malformed or `undefined` `expectedDigest` (an unset environment variable) also throws. |
-| `checkAgainstLock(lock, method, url, paymentRequired)`        | `{ verdict, code, detail, findings, notes }` for a PaymentRequired the client already decoded (x402 v2 header object or x402 v1 body). Never throws.                                                                                                                                                                      |
+| `checkAgainstLock(lock, method, url, paymentRequired)`        | `{ verdict, code, detail, change?, findings, notes }` for a PaymentRequired the client already decoded (x402 v2 header object or x402 v1 body). Never throws.                                                                                                                                                             |
 | `checkResponse(lock, method, url, { status, headers, body })` | The same result for a raw unpaid HTTP response (header names in any case). Never throws.                                                                                                                                                                                                                                  |
 
 `verdict` is `allowed`, `blocked` or `needsOk`; `code` is the reason code of the first finding with that verdict
 (`OK` when allowed); `detail` is the single verdict line ("Allowed: within your limits", "Blocked by your rule: …",
-"Needs your OK: …"). An endpoint that is not in the lock, a method other than GET or POST, a URL that cannot be read
+"Needs your OK: …"). `change` is `{ locked, new }` when `code` compares one value: `PAYTO_CHANGED`,
+`NETWORK_CHANGED`, `ASSET_CHANGED`, `SCHEME_CHANGED`, `PAYMENT_FLOW_CHANGED`, `PROTOCOL_VERSION_CHANGED`,
+`RESOURCE_URL_MISMATCH`, and `PRICE_ABOVE_LOCK` (where `locked` is the locked maximum, not the price seen at lock
+time); seller values are clipped to 120 characters as in `detail`. Each finding carries the same optional `change`,
+and so does `verify --json`. It is there so an owner-OK queue can show the code with the old and new value without
+parsing `detail` (D-030). An endpoint that is not in the lock, a method other than GET or POST, a URL that cannot be read
 and unreadable terms are all Blocked. One response is checked (no second sample at pay time).
 If you call `checkAgainstLock` yourself and also pay on Needs your OK (`allows(check, "blocked")`), check the option
 you are about to pay with `checkSelected` too: a new option the seller added is Needs your OK, not Blocked (AUDIT A2).

@@ -24,6 +24,7 @@ First release: a lockfile for the paid endpoints an AI agent calls.
   `checkSelected`, `checkResponse`, and hooks for the x402 TypeScript client (`installPaidLock`).
 - **Verdicts:** only "Allowed: within your limits", "Blocked by your rule: …" and "Needs your OK: …", with stable
   reason codes; anything unreadable or ambiguous is Blocked; price drops never fail.
+  A finding about one changed value also gives the locked and the new value as data (`change`), for an owner OK queue.
 
 ### Security
 
