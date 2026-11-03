@@ -3,6 +3,7 @@ export { AMOUNT_PATTERN, applyTolerance, isAmount, MAX_TOLERANCE_BPS } from "./a
 export { base64, INTEGRITY_PATTERN, integrityOf, isIntegrity, sha256Base64, type Integrity } from "./integrity.ts";
 export { canonicalize, CanonicalizationError, MAX_DEPTH, prettyCanonical } from "./jcs.ts";
 export { isJsonObject, type Json, type JsonObject } from "./json.ts";
+export { parseJsonGuarded, type JsonGuardResult } from "./json-guard.ts";
 export {
   emptyLock,
   endpointKey,

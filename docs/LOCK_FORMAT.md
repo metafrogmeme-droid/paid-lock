@@ -56,6 +56,8 @@ Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid
   are kept byte for byte: no trailing-slash, dot-segment, percent-encoding or query rewriting, so any path or query
   difference is a mismatch. URLs with whitespace, control characters, backslashes, credentials or an
   ambiguous authority are refused.
+- **Duplicate JSON keys are refused** when the lock is read, like in 402 terms: a reviewer could read the first value
+  while a parser takes the last.
 - **`observed`** is what the unpaid probe saw. Only `paid-lock update` rewrites it.
 - **`policy`** is the owner's. The tool never changes or removes a policy entry; `update` only adds a default
   entry (`maxAmount` = observed amount) for an option that has none, so the lock stays valid.

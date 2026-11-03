@@ -79,6 +79,7 @@ function normalizeOption(o: PaymentOption): { ok: true; option: PaymentOption } 
     return { ok: false, reason: "maxTimeoutSeconds is not a non-negative integer" };
   }
   if (!PAYMENT_FLOWS.includes(o.paymentFlow)) return { ok: false, reason: "payment flow is not one x402 defines" };
+  if (o.assetTransferMethod === "") return { ok: false, reason: "assetTransferMethod is empty" };
   const asset = normalizeAddress(o.network, o.asset);
   if (!asset.ok) return { ok: false, reason: `asset: ${asset.reason}` };
   const payTo = normalizeAddress(o.network, o.payTo);

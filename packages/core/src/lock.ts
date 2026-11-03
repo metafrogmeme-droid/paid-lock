@@ -7,8 +7,9 @@ import { z } from "zod";
 import { normalizeAddress } from "./address.ts";
 import { AMOUNT_PATTERN, applyTolerance } from "./amount.ts";
 import { INTEGRITY_PATTERN, integrityOf, type Integrity } from "./integrity.ts";
-import { MAX_DEPTH, prettyCanonical } from "./jcs.ts";
-import type { Json, JsonObject } from "./json.ts";
+import { prettyCanonical } from "./jcs.ts";
+import { parseJsonGuarded } from "./json-guard.ts";
+import type { Json } from "./json.ts";
 import { TIGHTENABLE } from "./reasons.ts";
 import { optionId, optionIntegrity, PAYMENT_FLOWS, type ObservedTerms, type PaymentOption } from "./terms.ts";
 import { normalizeUrl } from "./url.ts";
@@ -164,24 +165,17 @@ export function lockDigest(lock: Lock): Integrity {
 
 export function parseLock(text: string): ParseLockResult {
   if (new TextEncoder().encode(text).length > MAX_LOCK_BYTES) return { ok: false, errors: ["paid.lock is too large"] };
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
+  // Same guard as the 402 parsers: no duplicate keys (a reviewer could read the first value while the
+  // code takes the last), depth <= MAX_DEPTH, checked in one pass without recursion.
+  const json = parseJsonGuarded(text, MAX_LOCK_BYTES);
+  if (!json.ok) {
+    if (json.reason === "duplicate object key") return { ok: false, errors: ["paid.lock has a duplicate key"] };
+    if (json.reason.startsWith("JSON nests deeper")) return { ok: false, errors: ["paid.lock is nested too deeply"] };
     return { ok: false, errors: ["paid.lock is not valid JSON"] };
   }
-  if (tooDeep(raw, MAX_DEPTH)) return { ok: false, errors: ["paid.lock is nested too deeply"] };
-  const r = LockSchema.safeParse(raw);
+  const r = LockSchema.safeParse(json.value);
   if (!r.success) return { ok: false, errors: r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) };
   return { ok: true, lock: r.data };
-}
-
-/** True if `v` nests more than `limit` containers. Stops at the limit, so hostile input cannot exhaust the stack. */
-function tooDeep(v: unknown, limit: number): boolean {
-  if (v === null || typeof v !== "object") return false;
-  if (limit === 0) return true;
-  const children: unknown[] = Array.isArray(v) ? v : Object.values(v as JsonObject);
-  return children.some((c) => tooDeep(c, limit - 1));
 }
 
 /** JSON Schema (draft 2020-12) of the lock, generated from the zod schema: schemas/paid.lock.v1.schema.json. */
