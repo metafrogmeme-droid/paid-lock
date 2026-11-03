@@ -126,3 +126,54 @@ describe("mock seller", () => {
     expect((await fetch(`${s.origin}/v1/forecast`)).status).toBe(404);
   });
 });
+
+describe("mock seller: MPP challenges (test fixture)", () => {
+  const mpp = parseScenario({
+    _label: "Written with AI help, test fixture. Fake recipients; currency is an ISO 4217 code.",
+    name: "mpp",
+    routes: [
+      {
+        method: "GET",
+        path: "/mpp",
+        respond: {
+          kind: "mpp",
+          challenges: [
+            {
+              realm: "seller.test",
+              method: "example",
+              intent: "charge",
+              request: { recipient: "acct_1", currency: "usd", amount: "1000" },
+            },
+            { realm: "seller.test", method: "other", intent: "charge", request: { amount: "5", currency: "usd" } },
+          ],
+        },
+      },
+    ],
+  });
+
+  it("answers 402 with one WWW-Authenticate line per challenge, fresh id, expires and opaque each time", async () => {
+    seller = await startMockSeller({ scenario: mpp });
+    const first = await fetch(`${seller.origin}/mpp`);
+    const second = await fetch(`${seller.origin}/mpp`);
+    expect(first.status).toBe(402);
+    const a = first.headers.get("www-authenticate") ?? "";
+    const b = second.headers.get("www-authenticate") ?? "";
+    expect(a.match(/Payment /gu)).toHaveLength(2);
+    const ids = (h: string) => [...h.matchAll(/ id="([^"]+)"/gu)].map((m) => m[1]);
+    expect(ids(a)).toHaveLength(2);
+    expect(ids(a)).not.toEqual(ids(b));
+    expect(a).toMatch(/expires="\d{4}-\d\d-\d\dT[^"]+Z"/u);
+    expect(a).toMatch(/opaque="[A-Za-z0-9_-]+"/u);
+  });
+
+  it("serialises the request with sorted keys and no padding (JCS for the fixture's strings)", async () => {
+    seller = await startMockSeller({ scenario: mpp });
+    const h = (await fetch(`${seller.origin}/mpp`)).headers.get("www-authenticate") ?? "";
+    const request = /request="([^"]+)"/u.exec(h)?.[1] ?? "";
+    expect(request).not.toContain("=");
+    expect(Buffer.from(request, "base64url").toString("utf8")).toBe(
+      '{"amount":"1000","currency":"usd","recipient":"acct_1"}',
+    );
+    expect(seller.stats().challengesServed).toBe(1);
+  });
+});

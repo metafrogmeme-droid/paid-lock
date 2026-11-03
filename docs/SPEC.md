@@ -31,6 +31,18 @@ record that in the endpoint's policy; refused by default), `--fail-on needs-ok|b
 | 2    | Needs your OK (default `--fail-on needs-ok`)                                                   |
 | 3    | Tool error: bad arguments, missing or invalid `paid.lock`, URL refused before any request      |
 
+## What a 402 can carry
+
+paid-lock reads three kinds of payment terms from an unpaid 402 (LOCK_FORMAT, DECISIONS D-027):
+
+- **x402 v2:** the `PAYMENT-REQUIRED` header.
+- **MPP:** `WWW-Authenticate: Payment` challenges, one option per challenge with intent `charge`. The fields that
+  change on every challenge (`id`, `expires`, `opaque`, `digest`) are ignored, so the two probe samples still agree.
+- **x402 v1:** the JSON body.
+
+A 402 that offers both x402 and MPP terms is unreadable (Blocked), because paid-lock cannot know which one the client
+will pay. The same lock entries, verdicts and exit codes apply to all three.
+
 ## Verdicts and reason codes
 
 Output uses only "Allowed: within your limits", "Blocked by your rule: …" and "Needs your OK: …". Notes (for example

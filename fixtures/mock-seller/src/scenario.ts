@@ -8,10 +8,23 @@ import { z } from "zod";
  * The literal `${origin}` in any string is replaced at serve time.
  *   x402-v2: 402 + Base64 PAYMENT-REQUIRED header      x402-v1: 402 + JSON body
  *   raw:     any status, headers and body (200 unpaid, redirects, garbage headers, oversized bodies)
+ *   mpp:     402 + one `WWW-Authenticate: Payment` line per challenge (MPP, draft-httpauth-payment-01),
+ *            with a fresh id, expires and opaque on every response, like a real server's HMAC-bound fields
  */
+const MppChallengeSchema = z.strictObject({
+  realm: z.string(),
+  method: z.string(),
+  intent: z.string(),
+  /** The charge request object; served as unpadded base64url of its sorted-key JSON. */
+  request: z.json(),
+  /** Extra auth-params, served as quoted strings (e.g. description, or malformed values for negative tests). */
+  params: z.record(z.string(), z.string()).optional(),
+});
+
 const RespondSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("x402-v2"), paymentRequired: z.json() }),
   z.strictObject({ kind: z.literal("x402-v1"), body: z.json() }),
+  z.strictObject({ kind: z.literal("mpp"), challenges: z.array(MppChallengeSchema).min(1), body: z.json().optional() }),
   z.strictObject({
     kind: z.literal("raw"),
     status: z.int().min(100).max(599),

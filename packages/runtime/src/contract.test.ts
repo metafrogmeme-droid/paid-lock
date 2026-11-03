@@ -3,12 +3,18 @@
 // shared fixture set, the named /forecast changes that `pnpm demo` and the Action self-test use.
 // Loopback mock seller only; it fails the run if it ever sees a payment header.
 import { emptyLock, endpointKey, newEndpoint, type Lock } from "@paid-lock/core";
-import { startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
 import { probe } from "@paid-lock/probe";
 import { checkAgainstLock, checkResponse } from "./check.ts";
 import { runVerify } from "paid-lock";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { demoScenario, FORECAST_VARIANTS } from "@paid-lock/mock-seller";
+import {
+  demoScenario,
+  FORECAST_VARIANTS,
+  MPP_VARIANTS,
+  mppScenario,
+  startMockSeller,
+  type MockSeller,
+} from "@paid-lock/mock-seller";
 
 const EXPECTED: Record<string, [verdict: string, code: string]> = {
   unchanged: ["allowed", "OK"],
@@ -78,5 +84,47 @@ describe("runtime and CLI give the same verdicts on the shared fixture set", () 
         runtime.detail,
       ]);
     }
+  });
+});
+
+describe("runtime and CLI give the same verdicts on the MPP fixture set (D-027)", () => {
+  let mppSeller: MockSeller;
+  let mppUrl: string;
+  let mppLock: Lock;
+
+  beforeAll(async () => {
+    mppSeller = await startMockSeller({ scenario: mppScenario() });
+    mppUrl = `${mppSeller.origin}/mpp`;
+    const { samples } = await probe(mppUrl, { method: "GET", allowPrivateNetwork: true });
+    const first = samples[0];
+    if (first?.kind !== "terms") throw new Error("mock seller did not serve MPP terms");
+    mppLock = emptyLock();
+    mppLock.endpoints[endpointKey("GET", mppUrl)] = newEndpoint(first.terms, {
+      toleranceBps: 0,
+      allowPrivateNetwork: true,
+    });
+  });
+
+  afterAll(async () => {
+    const stats = mppSeller.stats();
+    await mppSeller.close();
+    expect(stats.paymentHeadersSeen).toBe(0);
+  });
+
+  it.each(Object.keys(MPP_VARIANTS))("%s", async (name) => {
+    const variant = MPP_VARIANTS[name];
+    if (variant === undefined) throw new Error(name);
+    mppSeller.use(mppScenario(variant.change));
+    const cli = (await runVerify(mppLock, { target: mppUrl, failOn: "needs-ok" })).results[0];
+    const res = await fetch(mppUrl, { redirect: "manual" });
+    const runtime = checkResponse(mppLock, "GET", mppUrl, {
+      status: res.status,
+      headers: Object.fromEntries(res.headers),
+      body: await res.text(),
+    });
+    expect([runtime.verdict, runtime.code]).toEqual(variant.expect);
+    expect(runtime.verdict).toBe(cli?.verdict);
+    expect(runtime.detail).toBe(cli?.line);
+    expect(runtime.findings.map((f) => f.code).sort()).toEqual((cli?.findings ?? []).map((f) => f.code).sort());
   });
 });

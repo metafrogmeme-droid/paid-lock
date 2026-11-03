@@ -4,7 +4,7 @@
 
 A lockfile for the paid endpoints your AI agent calls. Like `package-lock.json`, but for money: `paid.lock`
 pins, per endpoint, the `payTo`, network (CAIP-2), asset, scheme, maximum amount and a hash of the payment terms.
-The `paid-lock` CLI reads each endpoint's 402 terms **without paying** and a GitHub Action fails CI when a seller
+The `paid-lock` CLI reads each endpoint's 402 terms (x402 v2, x402 v1 or MPP) **without paying** and a GitHub Action fails CI when a seller
 changes where the money goes or raises the price above your lock.
 
 > **Status: MVP (CLI + GitHub Action) done; M5 (runtime library) in progress.** Nothing is published to npm or the

@@ -32,6 +32,21 @@ const scenario = parseScenario({
       path: "/v1",
       respond: { kind: "x402-v1", body: { x402Version: 1, error: "", accepts: acceptsV1 } },
     },
+    {
+      method: "GET",
+      path: "/mpp",
+      respond: {
+        kind: "mpp",
+        challenges: [
+          {
+            realm: "seller.test",
+            method: "example",
+            intent: "charge",
+            request: { amount: "1000", currency: "usd", recipient: "acct_1" },
+          },
+        ],
+      },
+    },
     { method: "GET", path: "/free", respond: { kind: "raw", status: 200, body: "free" } },
     {
       method: "GET",
@@ -84,6 +99,14 @@ describe("probe against the mock seller", () => {
     expect(stats.requests - before).toBe(2);
     expect(stats.paymentHeadersSeen).toBe(0);
     expect(stats.requestHeaderNames.filter((n) => !ALLOWED_HEADER_NAMES.has(n))).toEqual([]);
+  });
+
+  it("reads MPP challenges; their fresh id, expires and opaque leave the two samples identical", async () => {
+    const r = await probe(`${seller.origin}/mpp`, LOCAL);
+    const [a, b] = r.samples;
+    expect(a?.kind === "terms" && a.terms.protocol).toBe("mpp");
+    expect(a?.kind === "terms" && a.terms.resourceUrl).toBe(`${seller.origin}/mpp`);
+    expect(b).toEqual(a);
   });
 
   it("reads x402 v1 bodies", async () => {
