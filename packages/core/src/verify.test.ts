@@ -379,6 +379,11 @@ describe("verifySamples (two identical unpaid requests)", () => {
 });
 
 describe("verifyUnpinned (what paid-lock add checks)", () => {
+  it("blocks terms that name another resource URL than the requested one (review L6, T23)", () => {
+    const r = verifyUnpinned(KEY, [live(terms({ resourceUrl: `${URL}/other` }))]);
+    expect([r.verdict, r.findings.map((f) => f.code)]).toEqual(["blocked", ["RESOURCE_URL_MISMATCH"]]);
+  });
+
   it("allows two identical readable samples", () => {
     expect(verifyUnpinned(KEY, [live(terms()), live(terms())]).verdict).toBe("allowed");
   });

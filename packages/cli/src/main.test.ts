@@ -1,6 +1,6 @@
 import { lockDigest, parseLock } from "@paid-lock/core";
 import { parseScenario, startMockSeller, type MockSeller } from "@paid-lock/mock-seller";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -47,6 +47,15 @@ function scenario(a: Opt = {}) {
     routes: [
       v2("/a", a),
       v2("/b"),
+      { ...v2("/p", a), method: "POST" as const },
+      // Names another resource URL than the one requested (review L6, T23).
+      {
+        ...v2("/elsewhere"),
+        respond: {
+          kind: "x402-v2" as const,
+          paymentRequired: { ...v2("/elsewhere").respond.paymentRequired, resource: { url: "${origin}/a" } },
+        },
+      },
       { method: "GET", path: "/free", respond: { kind: "raw", status: 200 } },
       {
         method: "GET",
@@ -374,5 +383,30 @@ describe("digest (P-04)", () => {
     expect(await run(["digest"])).toBe(EXIT.toolError);
     writeFileSync(lockfile, "{}");
     expect(await run(["digest"])).toBe(EXIT.toolError);
+  });
+});
+
+describe("audit fixes (M6 review L5, L6, L8)", () => {
+  it("verify <url> and update <url> honour --method (a POST endpoint is not looked up as GET)", async () => {
+    await run(["init"]);
+    expect(await run(["add", url("/p"), LOCAL, "--method", "POST"])).toBe(EXIT.allowed);
+    expect(await run(["verify", url("/p"), "--method", "POST"])).toBe(EXIT.allowed);
+    expect(await run(["verify", url("/p")])).toBe(EXIT.blocked);
+    seller.use(scenario({ amount: "5000" }));
+    expect(await run(["update", url("/p"), "--method", "POST"])).toBe(EXIT.allowed);
+  });
+
+  it("add refuses a 402 that names another resource URL than the one requested, and writes nothing", async () => {
+    await run(["init"]);
+    const before = readLock();
+    const i = io();
+    expect(await run(["add", url("/elsewhere"), LOCAL], i)).toBe(EXIT.blocked);
+    expect(i.text()).toContain("Blocked by your rule: the 402 names a different resource URL");
+    expect(readLock()).toBe(before);
+  });
+
+  it("writes the lock through a fresh temp file and leaves none behind", async () => {
+    await initAndAdd("/a");
+    expect(readdirSync(dir).filter((f) => f.includes(".tmp"))).toEqual([]);
   });
 });
