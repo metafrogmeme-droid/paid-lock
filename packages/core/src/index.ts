@@ -8,6 +8,7 @@ export {
   emptyLock,
   endpointKey,
   lockJsonSchema,
+  lockDigest,
   LOCKFILE_VERSION,
   LockSchema,
   MAX_LOCK_BYTES,

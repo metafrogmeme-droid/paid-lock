@@ -7,6 +7,7 @@ import {
   emptyLock,
   endpointKey,
   isReasonCode,
+  lockDigest,
   MAX_TOLERANCE_BPS,
   newEndpoint,
   normalizeTerms,
@@ -39,6 +40,7 @@ Commands:
   diff [url]            show what changed since paid.lock (always exits 0)
   update <url> | --all  accept reviewed changes (rewrites observed terms, never your policy)
   explain <code>        explain a reason code
+  digest                print the digest of paid.lock (for the runtime's expectedDigest pin)
 
 Options:
   --lockfile <path>     default: paid.lock
@@ -216,6 +218,12 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
         io.out(`  accepted; observed terms updated in ${path} (policy unchanged)\n`);
       }
       return worst;
+    }
+
+    case "digest": {
+      const digest = lockDigest(readLock(path));
+      print(`${digest}\n`, { lockfile: path, digest });
+      return EXIT.allowed;
     }
 
     case "explain": {

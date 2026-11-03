@@ -15,6 +15,7 @@ probe is a plain unpaid request (see THREAT_MODEL.md).
 | `diff [url]`             | Same as `verify` with reason codes shown; always exits 0 (3 on a tool error).                                                                                                                                                                                                                                                                                                                                   |
 | `update <url>` / `--all` | Shows the changes and, once accepted, rewrites `observed` only. Your `policy` is never changed or removed; a new option gets a default entry. Accepting means typing `yes` on a terminal, or, without a terminal, passing `--accept-change <CODE>` for every reason code shown. Unreadable, missing, slow or unstable terms cannot be accepted. The brief's `lock` command is `update --all` (DECISIONS D-018). |
 | `explain <code>`         | Prints the verdict line and an explanation for a reason code.                                                                                                                                                                                                                                                                                                                                                   |
+| `digest`                 | Prints the digest of `paid.lock` (`sha256-<base64>` over its canonical JSON): the value for the runtime's `expectedDigest` pin. Exits 3 if the lock is missing or invalid.                                                                                                                                                                                                                                      |
 
 Options: `--lockfile <path>` (default `paid.lock`), `--method GET|POST` (add), `--tolerance <n%>` (add, whole
 percentage 0-100, default 0), `--allow-private-network` (add: allow a private, link-local or loopback address and
@@ -61,11 +62,11 @@ a price drop) change no verdict.
 `@paid-lock/runtime` (M5) checks a 402 against `paid.lock` at pay time with the same core check as the CLI and
 the Action (DECISIONS D-023). It never pays, signs or loads a key, and it makes no network request.
 
-| Function                                                      | Returns / does                                                                                                                                       |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `loadLock(path = "paid.lock")`                                | The validated, deep-frozen lock. Throws `LockLoadError` (with `errors` from the schema) when the file is missing, too large or invalid.              |
-| `checkAgainstLock(lock, method, url, paymentRequired)`        | `{ verdict, code, detail, findings, notes }` for a PaymentRequired the client already decoded (x402 v2 header object or x402 v1 body). Never throws. |
-| `checkResponse(lock, method, url, { status, headers, body })` | The same result for a raw unpaid HTTP response (header names in any case). Never throws.                                                             |
+| Function                                                      | Returns / does                                                                                                                                                                                                |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadLock(path = "paid.lock", { expectedDigest })`            | The validated, deep-frozen lock. Throws `LockLoadError` (with `errors` from the schema) when the file is missing, too large or invalid, or when `expectedDigest` is set and the lock's digest differs (P-04). |
+| `checkAgainstLock(lock, method, url, paymentRequired)`        | `{ verdict, code, detail, findings, notes }` for a PaymentRequired the client already decoded (x402 v2 header object or x402 v1 body). Never throws.                                                          |
+| `checkResponse(lock, method, url, { status, headers, body })` | The same result for a raw unpaid HTTP response (header names in any case). Never throws.                                                                                                                      |
 
 `verdict` is `allowed`, `blocked` or `needsOk`; `code` is the reason code of the first finding with that verdict
 (`OK` when allowed); `detail` is the single verdict line ("Allowed: within your limits", "Blocked by your rule: …",
@@ -76,6 +77,15 @@ and unreadable terms are all Blocked. One response is checked (no second sample 
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `checkSelected(lock, method, url, paymentRequired, selected)` | Checks the one option the client is about to pay, as if the 402 offered only that option (pinned options not selected are not reported as removed). Never throws. |
 | `allows(check, failOn = "needs-ok")`                          | Whether a check lets a payment go ahead: only Allowed by default; `"blocked"` also lets Needs your OK through (the CLI's `--fail-on`).                            |
+
+### Lock digest pin (P-04)
+
+`paid-lock digest` prints the digest of the reviewed lock. Set it at build or deploy time (for example as an
+environment variable baked into the image, or a constant in the agent's code) and pass it to
+`loadLock("paid.lock", { expectedDigest })`: a lock with any other digest is refused, so someone who can write
+`paid.lock` on the agent's host cannot loosen it without also changing the deployed digest. The digest covers what
+the lock says (the parsed lock as RFC 8785 canonical JSON), not its formatting. An empty or malformed
+`expectedDigest` is an error, never "no pin". The pin is only as strong as the place the digest is kept.
 
 ### Adapter for the official x402 client
 

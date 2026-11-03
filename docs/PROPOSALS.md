@@ -47,6 +47,8 @@ read-only). **Cost** 1.5 d. **Risk** medium (write token); mitigated by a separa
 
 ## P-04 Lock digest pin for the runtime
 
+**Status: approved by the owner on 2 Nov 2026; implemented (DECISIONS D-026).**
+
 **Problem.** At pay time the runtime trusts whatever `paid.lock` is on disk.
 **Idea.** `paid-lock digest` prints `sha256-<base64>` of the canonical lock; `loadLock({ expectedDigest })` refuses
 a lock that does not match a value set at build or deploy time. A cheap step before Sigstore-signed locks.

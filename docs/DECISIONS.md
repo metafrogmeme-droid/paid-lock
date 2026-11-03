@@ -163,3 +163,13 @@ than loosening either control, the test lands once 2.29.0 is old enough.
 through functions in the same file. A check that is only mentioned, not called, does not count, and an adapter file
 with no known pay path fails, so a new adapter cannot skip the lint by using a new hook name. Idea from the
 `001` repo's guard lint (design only, BUSL-1.1; code written fresh).
+
+**D-026 Lock digest pin (P-04, approved by the owner on 2 Nov 2026).** `lockDigest(lock)` in the core is
+`sha256-<base64>` over the RFC 8785 canonical JSON of the parsed lock, the same integrity form as the option hashes
+(D-016). Hashing the parsed lock rather than the file bytes means formatting does not matter while every change to
+observed terms, policy or the set of endpoints does. `paid-lock digest [--json]` prints it;
+`loadLock(path, { expectedDigest })` in the runtime refuses a lock with another digest. The second argument is an
+options object so later pins (for example a Sigstore bundle) can join it. `expectedDigest` is checked before the file
+is read: an empty or malformed value throws instead of disabling the pin, because an unset environment variable must
+not quietly turn the check off. The pin protects against edits to `paid.lock` on the agent's host, not against an
+attacker who can also change where the digest is kept (THREAT_MODEL T26).
