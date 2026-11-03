@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { parseLock, serializeLock, type Lock } from "@paid-lock/core";
 
@@ -12,10 +13,14 @@ export function readLock(path: string): Lock {
   return r.lock;
 }
 
-/** Write atomically (temp file + rename) so an interrupted run never leaves a half-written lock. */
+/**
+ * Write atomically (temp file + rename) so an interrupted run never leaves a half-written lock. The temp
+ * name is random and created exclusively (`wx`), so a file or symlink planted at a guessable name is never
+ * followed (audit L8).
+ */
 export function writeLock(path: string, lock: Lock): void {
-  const tmp = `${path}.tmp-${String(process.pid)}`;
-  writeFileSync(tmp, serializeLock(lock));
+  const tmp = `${path}.tmp-${randomBytes(8).toString("hex")}`;
+  writeFileSync(tmp, serializeLock(lock), { flag: "wx" });
   renameSync(tmp, path);
 }
 

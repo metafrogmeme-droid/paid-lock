@@ -12,6 +12,7 @@ import {
   normalizeTerms,
   verifyUnpinned,
   type EndpointResult,
+  type Method,
 } from "@paid-lock/core";
 import { probe, ProbeUrlError } from "@paid-lock/probe";
 import { EXPLAIN } from "./explain.ts";
@@ -43,7 +44,7 @@ Commands:
 
 Options:
   --lockfile <path>     default: paid.lock
-  --method GET|POST     add: request method (default GET)
+  --method GET|POST     add, verify <url>, update <url>: request method (default GET)
   --tolerance <n%>      add: allow price rises up to n% (0-100, whole number; default 0)
   --allow-private-network  add: allow a private, link-local or loopback address (recorded in the
                         endpoint's policy; refused by default)
@@ -57,6 +58,13 @@ paid-lock never pays, never signs and never loads a key.
 `;
 
 const exitFor = (verdict: EndpointResult["verdict"]): ExitCode => EXIT[verdict];
+
+/** --method for add, verify <url> and update <url>: GET (default) or POST. */
+function methodOption(value: string | undefined): Method {
+  const method = (value ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "POST") throw new CliError("--method must be GET or POST");
+  return method;
+}
 
 function parseTolerance(value: string | undefined): number {
   if (value === undefined) return 0;
@@ -126,8 +134,7 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
 
     case "add": {
       if (target === undefined) throw new CliError("add needs a URL");
-      const method = (values.method ?? "GET").toUpperCase();
-      if (method !== "GET" && method !== "POST") throw new CliError("--method must be GET or POST");
+      const method = methodOption(values.method);
       const toleranceBps = parseTolerance(values.tolerance);
       const lock = readLock(path);
       const key = endpointKey(method, target);
@@ -161,6 +168,7 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
       const lock = readLock(path);
       const { results, summary, exitCode } = await runVerify(lock, {
         failOn,
+        method: methodOption(values.method),
         ...(target === undefined ? {} : { target }),
       });
       print(results.map((r) => renderResult(r, command === "diff")).join("") + renderSummary(summary), {
@@ -173,7 +181,9 @@ async function run(argv: readonly string[], io: Io): Promise<ExitCode> {
     case "update": {
       if ((target === undefined) === !values.all) throw new CliError("update needs a URL or --all");
       let lock = readLock(path);
-      const keys = values.all ? Object.keys(lock.endpoints).sort() : [endpointKey("GET", target ?? "")];
+      const keys = values.all
+        ? Object.keys(lock.endpoints).sort()
+        : [endpointKey(methodOption(values.method), target ?? "")];
       for (const k of keys)
         if (!Object.hasOwn(lock.endpoints, k)) throw new CliError(`${k} is not in paid.lock (use paid-lock add)`);
       let worst: ExitCode = EXIT.allowed;

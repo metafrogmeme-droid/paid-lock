@@ -31,6 +31,11 @@ export interface LoadLockOptions {
 /** Load and validate a lock file (default `paid.lock` in the working directory). Throws LockLoadError. */
 export async function loadLock(path = "paid.lock", options: LoadLockOptions = {}): Promise<Readonly<Lock>> {
   const { expectedDigest } = options;
+  // A key that is present but undefined (e.g. `process.env.PAID_LOCK_DIGEST` when the variable is unset) is
+  // a pin that failed to arrive, not "no pin" (audit M2).
+  if (Object.hasOwn(options, "expectedDigest") && expectedDigest === undefined) {
+    throw new LockLoadError("expectedDigest is set but undefined (an unset environment variable?)");
+  }
   // An empty or malformed value (e.g. an unset environment variable) must not silently turn the pin off.
   if (expectedDigest !== undefined && !isIntegrity(expectedDigest)) {
     throw new LockLoadError("expectedDigest is not a sha256-<base64> digest (see paid-lock digest)");

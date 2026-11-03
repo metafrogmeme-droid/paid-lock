@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadLock, LockLoadError } from "./load.ts";
+import { loadLock, LockLoadError, type LoadLockOptions } from "./load.ts";
 
 let dir: string;
 beforeEach(() => {
@@ -115,6 +115,12 @@ describe("loadLock with expectedDigest (P-04)", () => {
     const file = join(dir, "paid.lock");
     writeFileSync(file, JSON.stringify(JSON.parse(serializeLock(lock))));
     await expect(loadLock(file, { expectedDigest: lockDigest(lock) })).resolves.toEqual(lock);
+  });
+
+  it("refuses an expectedDigest key that is present but undefined, e.g. an unset environment variable (review M2)", async () => {
+    const file = write(sampleLock());
+    const options = { expectedDigest: undefined } as unknown as LoadLockOptions;
+    await expect(loadLock(file, options)).rejects.toThrow("expectedDigest");
   });
 
   it("without expectedDigest, loads any valid lock as before", async () => {

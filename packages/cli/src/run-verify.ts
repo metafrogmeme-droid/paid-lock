@@ -58,8 +58,12 @@ export interface VerifyRun {
 }
 
 /** Verify every pinned endpoint (or one URL) and compute the exit code for `failOn`. */
-export async function runVerify(lock: Lock, opts: { target?: string; failOn: FailOn }): Promise<VerifyRun> {
-  const keys = opts.target === undefined ? Object.keys(lock.endpoints).sort() : [endpointKey("GET", opts.target)];
+export async function runVerify(
+  lock: Lock,
+  opts: { target?: string; method?: Method; failOn: FailOn },
+): Promise<VerifyRun> {
+  const keys =
+    opts.target === undefined ? Object.keys(lock.endpoints).sort() : [endpointKey(opts.method ?? "GET", opts.target)];
   const results: EndpointResult[] = [];
   for (const key of keys) results.push((await checkEndpoint(lock, methodOf(key), urlOf(key))).result);
   const summary = summarize(results);

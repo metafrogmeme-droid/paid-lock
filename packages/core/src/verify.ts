@@ -230,9 +230,15 @@ export function verifyUnpinned(key: string, samples: readonly Observation[]): En
   if (samples.length === 0) throw new RangeError("verifyUnpinned needs at least one sample");
   const c = new Collector([]);
   const seen = new Set<string>();
+  // The 402 must name the URL that was requested: pinning terms under another URL's entry is how a
+  // confused-deputy entry would get into a lock (THREAT_MODEL T23, audit L6).
+  const requested = key.slice(key.indexOf(" ") + 1);
   for (const s of samples) {
     const probeOnly = new Collector([]);
-    readableTerms(probeOnly, s);
+    const t = readableTerms(probeOnly, s);
+    if (t !== undefined && t.resourceUrl !== requested) {
+      probeOnly.add("RESOURCE_URL_MISMATCH", change(requested, t.resourceUrl));
+    }
     for (const f of probeOnly.findings) {
       if (!seen.has(f.line)) {
         seen.add(f.line);

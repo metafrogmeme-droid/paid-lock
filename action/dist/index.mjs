@@ -21660,7 +21660,7 @@ function exitCodeFor(summary, failOn) {
   return EXIT[summary.verdict];
 }
 async function runVerify(lock, opts) {
-  const keys = opts.target === void 0 ? Object.keys(lock.endpoints).sort() : [endpointKey("GET", opts.target)];
+  const keys = opts.target === void 0 ? Object.keys(lock.endpoints).sort() : [endpointKey(opts.method ?? "GET", opts.target)];
   const results = [];
   for (const key of keys) results.push((await checkEndpoint(lock, methodOf(key), urlOf(key))).result);
   const summary = summarize(results);
