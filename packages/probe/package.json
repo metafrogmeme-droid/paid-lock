@@ -4,6 +4,13 @@
   "private": true,
   "description": "Unpaid HTTP probe for paid endpoints. Never sends a payment header and never loads a key.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/metafrogmeme-droid/paid-lock.git",
+    "directory": "packages/probe"
+  },
+  "homepage": "https://github.com/metafrogmeme-droid/paid-lock#readme",
+  "bugs": "https://github.com/metafrogmeme-droid/paid-lock/issues",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"
@@ -18,7 +25,8 @@
   "files": [
     "dist",
     "!dist/**/*.test.*",
-    "!dist/.tsbuildinfo"
+    "!dist/.tsbuildinfo",
+    "!dist/**/*.map"
   ],
   "dependencies": {
     "@paid-lock/core": "workspace:*",
@@ -26,5 +34,14 @@
   },
   "devDependencies": {
     "@paid-lock/mock-seller": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   }
 }

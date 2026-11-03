@@ -82,6 +82,8 @@ the Action (DECISIONS D-023). It never pays, signs or loads a key, and it makes 
 (`OK` when allowed); `detail` is the single verdict line ("Allowed: within your limits", "Blocked by your rule: …",
 "Needs your OK: …"). An endpoint that is not in the lock, a method other than GET or POST, a URL that cannot be read
 and unreadable terms are all Blocked. One response is checked (no second sample at pay time).
+If you call `checkAgainstLock` yourself and also pay on Needs your OK (`allows(check, "blocked")`), check the option
+you are about to pay with `checkSelected` too: a new option the seller added is Needs your OK, not Blocked (AUDIT A2).
 
 | Also exported                                                 | Returns / does                                                                                                                                                    |
 | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
