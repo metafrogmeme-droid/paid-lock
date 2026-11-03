@@ -38,8 +38,8 @@ paid-lock reads three kinds of payment terms from an unpaid 402 (LOCK_FORMAT, DE
   change on every challenge (`id`, `expires`, `opaque`, `digest`) are ignored, so the two probe samples still agree.
 - **x402 v1:** the JSON body.
 
-A 402 that offers both x402 and MPP terms is unreadable (Blocked), because paid-lock cannot know which one the client
-will pay. The same lock entries, verdicts and exit codes apply to all three.
+A 402 that offers two different sets of terms (x402 and MPP, or an x402 v2 header plus a v1 body with other terms)
+is unreadable (Blocked), because paid-lock cannot know which one the client will pay. The same lock entries, verdicts and exit codes apply to all three.
 
 ## Verdicts and reason codes
 

@@ -260,7 +260,7 @@ describe("observe402 with MPP", () => {
       body: "",
       url: URL_,
     });
-    expect(both).toEqual({ kind: "unreadable", reason: "the response offers both x402 and MPP payment terms" });
+    expect(both).toEqual({ kind: "unreadable", reason: "the response offers more than one set of payment terms" });
   });
 
   it("is unreadable when MPP challenges come with an x402 v1 body", () => {
@@ -280,7 +280,7 @@ describe("observe402 with MPP", () => {
     });
     expect(observe402({ status: 402, headers: { "www-authenticate": challenge() }, body, url: URL_ })).toEqual({
       kind: "unreadable",
-      reason: "the response offers both x402 and MPP payment terms",
+      reason: "the response offers more than one set of payment terms",
     });
     const plain = observe402({ status: 402, headers: { "www-authenticate": challenge() }, body: "{}", url: URL_ });
     expect(plain.kind).toBe("terms");
@@ -294,6 +294,47 @@ describe("observe402 with MPP", () => {
       url: URL_,
     });
     expect(o.kind === "unreadable" && o.reason).toContain("intent");
+  });
+
+  it("is unreadable when an x402 v2 header comes with a different x402 v1 body (review M1)", () => {
+    const v1 = JSON.stringify({
+      x402Version: 1,
+      accepts: [
+        {
+          scheme: "exact",
+          network: "base-sepolia",
+          maxAmountRequired: "999999999",
+          asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          payTo: "0x000000000000000000000000000000000000dEaD",
+          resource: URL_,
+          maxTimeoutSeconds: 60,
+        },
+      ],
+    });
+    expect(observe402({ status: 402, headers: { "payment-required": v2Header }, body: v1, url: URL_ })).toEqual({
+      kind: "unreadable",
+      reason: "the response offers more than one set of payment terms",
+    });
+    const html = observe402({
+      status: 402,
+      headers: { "payment-required": v2Header },
+      body: "<html>pay</html>",
+      url: URL_,
+    });
+    expect(html.kind).toBe("terms");
+  });
+
+  it("never repeats seller text in an unreadable reason (CLAUDE.md §5 rule 13)", () => {
+    const intent = readMpp(challenge({ intent: "sellertext-intent" }), URL_);
+    expect(intent.kind === "unreadable" && intent.reason).not.toContain("sellertext");
+    for (const header of [
+      'Payment sellertextparam "x"',
+      "Payment a=b, sellertextparam=",
+      'Payment sellertextparam="1", sellertextparam="2"',
+    ]) {
+      const r = parseChallenges(header);
+      expect(!r.ok && r.reason).not.toContain("sellertext");
+    }
   });
 
   it("needs the request URL for MPP terms", () => {

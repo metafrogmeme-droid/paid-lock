@@ -90,7 +90,7 @@ export function parseChallenges(header: string): ChallengesResult {
       const name = token().toLowerCase();
       if (name === "") return fail("expected an auth-param name");
       ows();
-      if (header[i] !== "=") return fail(`expected "=" after ${name.slice(0, 40)}`);
+      if (header[i] !== "=") return fail('expected "=" after an auth-param name');
       i += 1;
       ows();
       let value: string;
@@ -100,9 +100,9 @@ export function parseChallenges(header: string): ChallengesResult {
         value = q;
       } else {
         value = token();
-        if (value === "") return fail(`missing value for ${name.slice(0, 40)}`);
+        if (value === "") return fail("an auth-param has no value");
       }
-      if (Object.hasOwn(c.params, name)) return fail(`duplicate auth-param ${name.slice(0, 40)}`);
+      if (Object.hasOwn(c.params, name)) return fail("duplicate auth-param");
       c.params[name] = value;
       ows();
       if (i >= header.length) break;
@@ -162,8 +162,7 @@ function toOption(c: Challenge): OptionResult {
   }
   const { realm = "", method = "", intent = "", request = "" } = p;
   if (!METHOD.test(method)) return { ok: false, reason: "MPP method is not a lowercase ASCII identifier" };
-  if (intent !== "charge")
-    return { ok: false, reason: `MPP intent "${intent.slice(0, 40)}" is not one paid.lock reads` };
+  if (intent !== "charge") return { ok: false, reason: "MPP intent is not one paid.lock reads (only charge)" };
   const decoded = decodeRequest(request);
   if (!decoded.ok) return decoded;
   const r = ChargeRequest.safeParse(decoded.request);

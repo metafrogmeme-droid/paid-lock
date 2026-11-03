@@ -306,3 +306,10 @@ describe("fuzz", () => {
     );
   });
 });
+
+describe("unreadable reasons carry no seller text (CLAUDE.md §5 rule 13)", () => {
+  it("does not repeat an unknown v1 network name", () => {
+    const r = parseX402V1Body(v1({ network: "sellertext-net" }));
+    expect(!r.ok && r.reason).toBe("x402 v1: unknown network name");
+  });
+});
