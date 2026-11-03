@@ -81,10 +81,12 @@ function isTimeout(err: unknown): boolean {
   return err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
 }
 
-type SampleOptions = Required<Omit<ProbeOptions, "body" | "samples">> & { body?: string };
+type SendOptions = Required<Omit<ProbeOptions, "body" | "samples">> & { body?: string };
+/** Per-sample options; `url` is the requested URL as normalised by normalizeUrl. */
+type SampleOptions = SendOptions & { url: string };
 
 /** Resolve (or read the literal) and check the target address. Throws ProbeUrlError when refused. */
-async function targetAddress(target: URL, opts: SampleOptions): Promise<ResolvedAddress> {
+async function targetAddress(target: URL, opts: SendOptions): Promise<ResolvedAddress> {
   const literal = hostLiteral(target.hostname);
   if (literal !== undefined) {
     const c = classifyAddress(literal);
@@ -107,7 +109,7 @@ function refusal(target: URL, why: string): string {
 }
 
 /** One unpaid request to exactly `address` (the connection never looks the name up again). Exported for tests. */
-export function sendPinned(target: URL, address: ResolvedAddress, opts: SampleOptions): Promise<IncomingMessage> {
+export function sendPinned(target: URL, address: ResolvedAddress, opts: SendOptions): Promise<IncomingMessage> {
   const headers: Record<string, string> = { host: target.host, accept: "application/json", "user-agent": USER_AGENT };
   if (opts.body !== undefined) {
     headers["content-type"] = "application/json";
@@ -159,16 +161,16 @@ async function probeOnce(target: URL, opts: SampleOptions): Promise<Observation>
     const header = res.headers["payment-required"];
     // MPP challenges (D-027). Node joins repeated WWW-Authenticate lines with ", "; the parser reads that list.
     const auth = res.headers["www-authenticate"];
-    const headers = { ...(typeof auth === "string" ? { "www-authenticate": auth } : {}) };
-    const url = target.href;
-    if (typeof header === "string") {
-      res.destroy();
-      return observe402({ status: 402, headers: { ...headers, "payment-required": header }, body: "", url });
-    }
+    const headers = {
+      ...(typeof auth === "string" ? { "www-authenticate": auth } : {}),
+      ...(typeof header === "string" ? { "payment-required": header } : {}),
+    };
+    // The body is read even next to a PAYMENT-REQUIRED header: a different v1 offer there is ambiguous (review M1).
     const bytes = await readCapped(res, opts.maxBodyBytes);
     if (bytes === null)
       return { kind: "unreadable", reason: `response body is larger than ${String(opts.maxBodyBytes)} bytes` };
-    return observe402({ status: 402, headers, body: new TextDecoder().decode(bytes), url });
+    // The URL as requested and normalised (not URL#href, which re-serialises it), as at pay time (review L7).
+    return observe402({ status: 402, headers, body: new TextDecoder().decode(bytes), url: opts.url });
   } catch (err) {
     if (isTimeout(err)) return { kind: "timeout" };
     return { kind: "unreadable", reason: "response could not be read" };
@@ -185,6 +187,7 @@ export async function probe(url: string, options: ProbeOptions = {}): Promise<Pr
   const method = options.method ?? "GET";
   if (options.body !== undefined && method !== "POST") throw new RangeError("a request body needs method POST");
   const opts: SampleOptions = {
+    url: normalized.value,
     method,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     maxBodyBytes: options.maxBodyBytes ?? MAX_BODY_BYTES,

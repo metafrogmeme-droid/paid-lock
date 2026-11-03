@@ -23,6 +23,13 @@ describe("copy-lint rules", () => {
     expect(f).toEqual([{ file: "docs/x.md", line: 1, message: `banned word "${word}"` }]);
   });
 
+  it("exempts only npm's feature name, not the word itself", () => {
+    expect(
+      lintText("docs/RELEASE.md", `npm ${W.t} publishing and the ${W.t.replace("t", "T")} Publisher page`),
+    ).toEqual([]);
+    expect(lintText("docs/RELEASE.md", `publishing from a ${W.t} source`)).toHaveLength(1);
+  });
+
   it.each(["Blocked by your rule: payTo changed", "un" + W.t + " input", W.s + "ty notes", "Number.MAX_SAFE_INTEGER"])(
     "does not flag %j",
     (text) => {

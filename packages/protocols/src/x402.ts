@@ -184,8 +184,7 @@ export function fromV1Json(value: unknown): ParseResult {
   const options: PaymentOption[] = [];
   for (const req of r.data.accepts) {
     const network = v1NetworkToCaip2(req.network);
-    if (network === undefined)
-      return { ok: false, reason: `x402 v1: unknown network name "${req.network.slice(0, 40)}"` };
+    if (network === undefined) return { ok: false, reason: "x402 v1: unknown network name" };
     const extra = splitExtra(req.extra);
     if (!extra.ok) return extra;
     options.push({
