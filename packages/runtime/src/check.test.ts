@@ -4,6 +4,7 @@ import {
   emptyLock,
   endpointKey,
   newEndpoint,
+  normalizeTerms,
   REASON_CODES,
   VERDICTS,
   type Lock,
@@ -274,5 +275,51 @@ describe("allows (which verdicts let a payment go ahead)", () => {
     expect(allows({ ...base, verdict: "needsOk" })).toBe(false);
     expect(allows({ ...base, verdict: "needsOk" }, "blocked")).toBe(true);
     expect(allows({ ...base, verdict: "blocked" }, "blocked")).toBe(false);
+  });
+});
+
+describe("checkResponse with MPP challenges (D-027)", () => {
+  // draft-httpauth-payment-01 §5.1.2.2 example request, served for this test's URL.
+  const challenge = (recipient: string): string => {
+    const request = Buffer.from(`{"amount":"1000","currency":"usd","recipient":"${recipient}"}`).toString("base64url");
+    return `Payment id="x7Tg2pLqR9mKvNwY3hBcZa", realm="shop.example.com", method="example", intent="charge", request="${request}"`;
+  };
+  const response = (recipient: string) => ({
+    status: 402,
+    headers: { "WWW-Authenticate": challenge(recipient) },
+    body: "",
+  });
+
+  function mppLock(): Lock {
+    const lock = emptyLock();
+    const n = normalizeTerms({
+      protocol: "mpp",
+      resourceUrl: URL_,
+      envelope: {},
+      options: [
+        {
+          scheme: "charge",
+          network: "mpp:example",
+          asset: "usd",
+          payTo: "acct_123",
+          amount: "1000",
+          maxTimeoutSeconds: 0,
+          paymentFlow: "authorization",
+          assetTransferMethod: null,
+          extra: { realm: "shop.example.com" },
+          otherFields: {},
+        },
+      ],
+    });
+    if (!n.ok) throw new Error(n.reason);
+    lock.endpoints[endpointKey("GET", URL_)] = newEndpoint(n.terms, { toleranceBps: 0 });
+    return lock;
+  }
+
+  it("allows the pinned MPP terms and blocks another recipient", () => {
+    const lock = mppLock();
+    expect(checkResponse(lock, "GET", URL_, response("acct_123")).code).toBe("OK");
+    const r = checkResponse(lock, "GET", URL_, response("acct_999"));
+    expect([r.verdict, r.code]).toEqual(["blocked", "PAYTO_CHANGED"]);
   });
 });

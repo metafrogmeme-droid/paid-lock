@@ -70,8 +70,8 @@ Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid
 | Path                            | Meaning                                                                                                                                                                                                                                 |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lockfileVersion`               | `1`.                                                                                                                                                                                                                                    |
-| `observed.protocol`             | `"x402"` (MPP arrives in M5).                                                                                                                                                                                                           |
-| `observed.x402Version`          | Pinned. A different version is `PROTOCOL_VERSION_CHANGED` (Needs your OK).                                                                                                                                                              |
+| `observed.protocol`             | `"x402"` or `"mpp"` (MPP `Payment` challenges, see below).                                                                                                                                                                              |
+| `observed.x402Version`          | x402 only, pinned. A different version, or a switch between x402 and MPP, is `PROTOCOL_VERSION_CHANGED` (Needs your OK). MPP entries have no such key.                                                                                  |
 | `observed.resourceUrl`          | `resource.url` (v2) or the accepts' `resource` (v1), normalised as above; any difference is `RESOURCE_URL_MISMATCH` (Blocked).                                                                                                          |
 | `observed.envelopeIntegrity`    | Hash of the parts outside `accepts[]` that can change terms (see below).                                                                                                                                                                |
 | `observed.options.<id>.*`       | The normalised option (fields below) plus `integrity`, its terms hash.                                                                                                                                                                  |
@@ -92,6 +92,29 @@ Approved in PROPOSALS P-01 (1 Nov 2026). Machine-readable schema: [`schemas/paid
 | `assetTransferMethod` | `extra.assetTransferMethod`                                | absent → `null`                                                                                                                                                                          |
 | `extra`               | `extra` without the two reserved keys                      | as received                                                                                                                                                                              |
 | `otherFields`         | keys of the accepts entry that x402 does not define        | as received (so drift in them is still visible)                                                                                                                                          |
+
+### MPP challenges as options (DECISIONS D-027)
+
+Each `WWW-Authenticate: Payment` challenge with intent `charge` becomes one option. Same fields, so the same
+identity rules, hashes and verdicts apply.
+
+| Field                 | From the challenge                                      | Notes                                                                                                               |
+| --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `scheme`              | `intent` (only `charge` is read; others are unreadable) |                                                                                                                     |
+| `network`             | `"mpp:" + method`                                       | CAIP-2-shaped name, not a chain id; a different `method` is `NETWORK_CHANGED`                                       |
+| `asset`               | request `currency`                                      | exact (ISO 4217 code or token address; not EIP-55, because `mpp:*` is not `eip155:*`)                               |
+| `payTo`               | request `recipient`; if absent, `"realm:" + realm`      | without a recipient the money goes to whoever runs the realm, so a realm change is then `PAYTO_CHANGED`             |
+| `amount`              | request `amount`                                        | base units, compared with `maxAmount` like x402                                                                     |
+| `maxTimeoutSeconds`   | `0`                                                     | MPP has a per-challenge `expires` instead, which is not pinned                                                      |
+| `paymentFlow`         | `authorization`                                         | MPP has no payment flow; the x402 default is stored so the field never changes                                      |
+| `assetTransferMethod` | `null`                                                  |                                                                                                                     |
+| `extra`               | `{ realm, methodDetails }`                              | a change is `TERMS_CHANGED_OTHER` (e.g. a chain id in `methodDetails`; tighten it to Blocked with `policy.tighten`) |
+| `otherFields`         | request fields the charge intent does not define        | as received                                                                                                         |
+
+`resourceUrl` is the URL that was requested (a challenge names none). Left out as per-challenge or display-only:
+`id`, `expires`, `opaque`, `digest`, `description`, `header`, unknown auth-params, and the request's `description` and
+`externalId`. The envelope is empty. A 402 that offers both x402 terms and MPP challenges is unreadable (Blocked),
+and so is a `request` that is not unpadded base64url of JCS (RFC 8785) JSON.
 
 ## Terms hash per option (`integrity`)
 

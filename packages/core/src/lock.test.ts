@@ -1,12 +1,13 @@
 // Written with AI help.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { option, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
+import { mppTerms, option, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
 import {
   emptyLock,
   endpointKey,
   lockDigest,
   newEndpoint,
+  observedFrom,
   parseLock,
   serializeLock,
   type Lock,
@@ -46,7 +47,7 @@ describe("newEndpoint", () => {
     const id = optionId(option());
     expect(ep.observed.options[id]?.amount).toBe("10000");
     expect(ep.policy.options[id]).toEqual({ maxAmount: "10000" });
-    expect(ep.observed.x402Version).toBe(2);
+    expect(ep.observed).toMatchObject({ protocol: "x402", x402Version: 2 });
     expect(ep.observed.envelopeIntegrity).toMatch(/^sha256-/);
   });
 
@@ -204,5 +205,41 @@ describe("lockDigest (P-04)", () => {
         expect(lockDigest(build([...paths].reverse()))).toBe(lockDigest(build(paths)));
       }),
     );
+  });
+});
+
+describe("MPP endpoints in the lock (D-027)", () => {
+  function mppLock(): Lock {
+    const lock = emptyLock();
+    lock.endpoints[endpointKey("GET", "https://api.example.com/v1/forecast")] = newEndpoint(normalized(mppTerms()), {
+      toleranceBps: 0,
+    });
+    return lock;
+  }
+
+  it("round-trips byte-identically and has no x402Version", () => {
+    const text = serializeLock(mppLock());
+    const parsed = parseLock(text);
+    if (!parsed.ok) throw new Error(parsed.errors.join("; "));
+    expect(serializeLock(parsed.lock)).toBe(text);
+    expect(text).toContain('"protocol": "mpp"');
+    expect(text).not.toContain("x402Version");
+  });
+
+  it("observedFrom refuses x402 terms without a version (normalizeTerms never lets them through)", () => {
+    const noVersion = terms();
+    delete noVersion.x402Version;
+    expect(() => observedFrom(noVersion)).toThrow(RangeError);
+  });
+
+  it("refuses an MPP entry with an x402Version and an x402 entry without one", () => {
+    const mpp = JSON.parse(serializeLock(mppLock())) as {
+      endpoints: Record<string, { observed: Record<string, unknown> }>;
+    };
+    for (const ep of Object.values(mpp.endpoints)) ep.observed["x402Version"] = 2;
+    expect(parseLock(JSON.stringify(mpp)).ok).toBe(false);
+    const x402 = JSON.parse(serializeLock(lockWith())) as typeof mpp;
+    for (const ep of Object.values(x402.endpoints)) delete ep.observed["x402Version"];
+    expect(parseLock(JSON.stringify(x402)).ok).toBe(false);
   });
 });

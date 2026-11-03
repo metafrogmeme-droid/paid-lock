@@ -89,6 +89,10 @@ class Collector {
   }
 }
 
+function protocolLabel(t: Pick<ObservedTerms, "protocol" | "x402Version">): string {
+  return t.protocol === "mpp" ? "mpp" : `x402 v${String(t.x402Version)}`;
+}
+
 function sharedIdentity(a: PaymentOption, b: PaymentOption): number {
   return IDENTITY.filter((f) => a[f] === b[f]).length;
 }
@@ -113,12 +117,9 @@ export function verifyEndpoint(lock: Lock, key: string, obs: Observation): Endpo
   const t = readableTerms(c, obs);
   if (t === undefined) return c.result(key);
   const locked = ep.observed;
-  // Both sides are "x402" until MPP lands (M5); then a protocol change is reported here too.
-  if (t.x402Version !== locked.x402Version) {
-    c.add(
-      "PROTOCOL_VERSION_CHANGED",
-      change(`${locked.protocol} v${String(locked.x402Version)}`, `${t.protocol} v${String(t.x402Version)}`),
-    );
+  // A switch between x402 versions, or between x402 and MPP, needs your OK (approved P-01, D-027).
+  if (protocolLabel(t) !== protocolLabel(locked)) {
+    c.add("PROTOCOL_VERSION_CHANGED", change(protocolLabel(locked), protocolLabel(t)));
   }
   if (t.resourceUrl !== locked.resourceUrl) c.add("RESOURCE_URL_MISMATCH", change(locked.resourceUrl, t.resourceUrl));
   if (integrityOf(t.envelope) !== locked.envelopeIntegrity) c.add("TERMS_CHANGED_OTHER", "(extensions changed)");

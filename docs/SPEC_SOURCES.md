@@ -36,11 +36,24 @@ entries, strict canonical Base64, duplicate JSON object keys refused (parsers di
 Fixture asset: Base Sepolia USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e` on `eip155:84532`, copied from the
 x402 v2 spec example (testnet).
 
-## MPP (not yet verified)
+## MPP (read 2 Nov 2026)
 
-`https://mpp.dev/protocol/challenges` and `https://paymentauth.org/draft-httpauth-payment-01.pdf` could not be
-fetched from the build environment on 31 Oct 2026 (egress policy denied both hosts). Nothing MPP-specific is
-coded yet. Before M5 these must be read and pinned here (URL + date + draft revision). See OPEN_QUESTIONS Q-B.
+The build environment cannot reach these hosts, so the owner's researcher fetched them on 2 Nov 2026 and the owner
+pasted verbatim excerpts into the session (OPEN_QUESTIONS Q-B). IETF drafts are versioned by their revision number,
+which plays the role of a commit SHA here.
+
+| Source                                                                            | Used for                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `https://paymentauth.org/draft-httpauth-payment-01.txt` §5.1, §5.1.1, §5.1.2      | `WWW-Authenticate: Payment` challenge grammar (RFC 9110 auth-params). Required: `id` (non-empty, MUST be rejected when missing), `realm`, `method` (lowercase ASCII), `intent`, `request` (unpadded base64url of JCS JSON). Optional: `digest`, `expires`, `description`, `header`, `opaque`. Unknown parameters MUST be ignored. |
+| same, §5.1.2.2                                                                    | Example challenge, used verbatim as a conformance fixture in `packages/protocols/src/mpp.test.ts`.                                                                                                                                                                                                                                |
+| same, §5.1.2.1 and §5.1.2.1.1                                                     | The server binds `id` (an HMAC) to `realm`, `method`, `intent`, `request`, `expires`, `digest`, `opaque` and `header`: `id`, `expires`, `opaque` and `digest` are per challenge and left out of the terms; `description` is display only and MUST NOT be used for payment verification.                                           |
+| same, §5.2                                                                        | Credentials go in `Authorization` (or `Payment-Authorization`). paid.lock never builds or sends them; the mock seller counts any request that does.                                                                                                                                                                               |
+| `https://paymentauth.org/draft-payment-intent-charge-00.txt` §5, §5.1–5.3, §5.4.2 | `charge` request: `amount` (string, base units) and `currency` required; `recipient`, `description`, `externalId`, `methodDetails` optional; methods may make `recipient` required. The Tempo example request is a test fixture.                                                                                                  |
+| `https://mpp.dev/protocol/challenges.md`                                          | Several challenges may be offered (one per method); the client picks one. Common fields `amount`, `currency`, `recipient`.                                                                                                                                                                                                        |
+
+Not read yet: `draft-evm-charge-00` (EVM `methodDetails`, e.g. chain id), session and subscription intents, error
+codes (§8), security considerations (§11). Until then only the `charge` intent is read, and `methodDetails` is pinned
+as a whole (DECISIONS D-027).
 
 ## Comparison sources
 

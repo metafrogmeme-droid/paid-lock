@@ -173,3 +173,23 @@ options object so later pins (for example a Sigstore bundle) can join it. `expec
 is read: an empty or malformed value throws instead of disabling the pin, because an unset environment variable must
 not quietly turn the check off. The pin protects against edits to `paid.lock` on the agent's host, not against an
 attacker who can also change where the digest is kept (THREAT_MODEL T26).
+
+**D-027 MPP read support: challenges map onto the existing option fields.** Sources: SPEC_SOURCES, MPP section.
+Each `WWW-Authenticate: Payment` challenge with intent `charge` becomes one option (LOCK_FORMAT, "MPP challenges as
+options"), so identity matching, terms hashes, `maxAmount` and every reason code work unchanged, and the runtime and
+the Action read MPP with no extra code. The lock gains `observed.protocol: "mpp"` (a discriminated union in the
+schema; MPP entries have no `x402Version`). This is additive: existing x402 locks are byte-identical and
+`lockfileVersion` stays 1. Choices, each fail closed:
+
+- `network` is `mpp:<method>`: CAIP-2-shaped, but not a chain. A different method is `NETWORK_CHANGED`. A chain id
+  inside `methodDetails` (Tempo's `chainId`) is pinned in `extra`, so a change is `TERMS_CHANGED_OTHER` (Needs your
+  OK, can be tightened). Mapping it to Blocked needs `draft-evm-charge-00`, which has not been read.
+- Without a `recipient` (optional for some methods), `payTo` is `realm:<realm>`, so a realm change is
+  `PAYTO_CHANGED` (Blocked) instead of an "other" change.
+- Only the `charge` intent is read; other intents are unreadable until their request schema is pinned.
+- The `request` must be unpadded base64url of JSON already in JCS form (the draft's rule). Any other serialisation
+  is refused, so two parsers cannot read different terms from one challenge (same reason as the duplicate-key rule).
+- A 402 that offers both x402 terms (header or v1 body) and MPP challenges is unreadable: paid.lock cannot know which
+  one the client will pay.
+- `WWW-Authenticate` is parsed as an RFC 9110 challenge list (Node joins repeated headers with `", "`), with token68,
+  quoted-pair and duplicate-parameter handling; other schemes such as `Bearer` are ignored.

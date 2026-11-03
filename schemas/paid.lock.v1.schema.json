@@ -16,125 +16,244 @@
         "type": "object",
         "properties": {
           "observed": {
-            "type": "object",
-            "properties": {
-              "protocol": {
-                "type": "string",
-                "const": "x402"
-              },
-              "x402Version": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "resourceUrl": {
-                "type": "string",
-                "format": "uri"
-              },
-              "envelopeIntegrity": {
-                "type": "string",
-                "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
-              },
-              "options": {
+            "oneOf": [
+              {
                 "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "scheme": {
-                      "type": "string",
-                      "pattern": "^[\\x21-\\x7e]+$"
-                    },
-                    "network": {
-                      "type": "string",
-                      "pattern": "^[\\x21-\\x7e]+$"
-                    },
-                    "asset": {
-                      "type": "string",
-                      "pattern": "^[\\x21-\\x7e]+$"
-                    },
-                    "payTo": {
-                      "type": "string",
-                      "pattern": "^[\\x21-\\x7e]+$"
-                    },
-                    "amount": {
-                      "type": "string",
-                      "pattern": "^(?:0|[1-9][0-9]{0,77})$"
-                    },
-                    "maxTimeoutSeconds": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "paymentFlow": {
-                      "type": "string",
-                      "enum": [
-                        "authorization",
-                        "upfront",
-                        "escrow"
-                      ]
-                    },
-                    "assetTransferMethod": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "extra": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {
-                        "$ref": "#/$defs/__schema0"
-                      }
-                    },
-                    "otherFields": {
-                      "type": "object",
-                      "propertyNames": {
-                        "type": "string"
-                      },
-                      "additionalProperties": {
-                        "$ref": "#/$defs/__schema0"
-                      }
-                    },
-                    "integrity": {
-                      "type": "string",
-                      "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
-                    }
+                "properties": {
+                  "protocol": {
+                    "type": "string",
+                    "const": "x402"
                   },
-                  "required": [
-                    "scheme",
-                    "network",
-                    "asset",
-                    "payTo",
-                    "amount",
-                    "maxTimeoutSeconds",
-                    "paymentFlow",
-                    "assetTransferMethod",
-                    "extra",
-                    "otherFields",
-                    "integrity"
-                  ],
-                  "additionalProperties": false
-                }
+                  "x402Version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "resourceUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "envelopeIntegrity": {
+                    "type": "string",
+                    "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "scheme": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "network": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "asset": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "payTo": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]{0,77})$"
+                        },
+                        "maxTimeoutSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "paymentFlow": {
+                          "type": "string",
+                          "enum": [
+                            "authorization",
+                            "upfront",
+                            "escrow"
+                          ]
+                        },
+                        "assetTransferMethod": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "extra": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        },
+                        "otherFields": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        },
+                        "integrity": {
+                          "type": "string",
+                          "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
+                        }
+                      },
+                      "required": [
+                        "scheme",
+                        "network",
+                        "asset",
+                        "payTo",
+                        "amount",
+                        "maxTimeoutSeconds",
+                        "paymentFlow",
+                        "assetTransferMethod",
+                        "extra",
+                        "otherFields",
+                        "integrity"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "protocol",
+                  "x402Version",
+                  "resourceUrl",
+                  "envelopeIntegrity",
+                  "options"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "protocol": {
+                    "type": "string",
+                    "const": "mpp"
+                  },
+                  "resourceUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "envelopeIntegrity": {
+                    "type": "string",
+                    "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "scheme": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "network": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "asset": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "payTo": {
+                          "type": "string",
+                          "pattern": "^[\\x21-\\x7e]+$"
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]{0,77})$"
+                        },
+                        "maxTimeoutSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "paymentFlow": {
+                          "type": "string",
+                          "enum": [
+                            "authorization",
+                            "upfront",
+                            "escrow"
+                          ]
+                        },
+                        "assetTransferMethod": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "extra": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        },
+                        "otherFields": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        },
+                        "integrity": {
+                          "type": "string",
+                          "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
+                        }
+                      },
+                      "required": [
+                        "scheme",
+                        "network",
+                        "asset",
+                        "payTo",
+                        "amount",
+                        "maxTimeoutSeconds",
+                        "paymentFlow",
+                        "assetTransferMethod",
+                        "extra",
+                        "otherFields",
+                        "integrity"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "protocol",
+                  "resourceUrl",
+                  "envelopeIntegrity",
+                  "options"
+                ],
+                "additionalProperties": false
               }
-            },
-            "required": [
-              "protocol",
-              "x402Version",
-              "resourceUrl",
-              "envelopeIntegrity",
-              "options"
-            ],
-            "additionalProperties": false
+            ]
           },
           "policy": {
             "type": "object",

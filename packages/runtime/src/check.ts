@@ -118,7 +118,7 @@ export function checkResponse(
   return check(lock, method, url, () => {
     const headers: Record<string, string | undefined> = {};
     for (const [name, value] of Object.entries(response.headers)) headers[name.toLowerCase()] = value;
-    const res: UnpaidResponse = { status: response.status, headers, body: response.body };
+    const res: UnpaidResponse = { status: response.status, headers, body: response.body, url };
     return observe402(res);
   });
 }

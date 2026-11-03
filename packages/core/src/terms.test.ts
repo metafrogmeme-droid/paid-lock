@@ -1,7 +1,7 @@
 // Written with AI help.
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
+import { mppTerms, option, PAY_A, terms, USDC_TESTNET } from "./__fixtures__/terms.ts";
 import { normalizeTerms, optionId, optionIntegrity, type ObservedTerms, type PaymentOption } from "./terms.ts";
 
 describe("optionId", () => {
@@ -78,5 +78,24 @@ describe("normalizeTerms", () => {
   it("normalises the resource URL", () => {
     const r = normalizeTerms(terms({ resourceUrl: "HTTPS://Shop.Example.com:443/v1/forecast" }));
     expect(r.ok && r.terms.resourceUrl).toBe("https://shop.example.com/v1/forecast");
+  });
+});
+
+describe("normalizeTerms: protocol and version (MPP, D-027)", () => {
+  it("accepts MPP terms, which have no x402Version", () => {
+    const r = normalizeTerms(mppTerms());
+    expect(r.ok).toBe(true);
+  });
+
+  it("refuses MPP terms that carry an x402Version, and x402 terms without one", () => {
+    expect(normalizeTerms({ ...mppTerms(), x402Version: 2 })).toEqual({
+      ok: false,
+      reason: "x402Version is only valid for x402",
+    });
+    const noVersion = terms();
+    delete noVersion.x402Version;
+    expect(normalizeTerms(noVersion)).toEqual({ ok: false, reason: "x402Version must be a positive integer" });
+    expect(normalizeTerms(terms({ x402Version: 0 })).ok).toBe(false);
+    expect(normalizeTerms(terms({ x402Version: 1.5 })).ok).toBe(false);
   });
 });
