@@ -17,3 +17,4 @@ export {
   type DemoChange,
   type DemoEndpoint,
 } from "./demo-scenarios.ts";
+export { MPP_RECIPIENT, MPP_TOKEN, MPP_VARIANTS, mppScenario, type MppChange } from "./mpp-scenarios.ts";

@@ -21565,14 +21565,17 @@ async function probeOnce(target, opts) {
       return { kind: "not402", status };
     }
     const header = res.headers["payment-required"];
+    const auth = res.headers["www-authenticate"];
+    const headers = { ...typeof auth === "string" ? { "www-authenticate": auth } : {} };
+    const url2 = target.href;
     if (typeof header === "string") {
       res.destroy();
-      return observe402({ status: 402, headers: { "payment-required": header }, body: "" });
+      return observe402({ status: 402, headers: { ...headers, "payment-required": header }, body: "", url: url2 });
     }
     const bytes = await readCapped(res, opts.maxBodyBytes);
     if (bytes === null)
       return { kind: "unreadable", reason: `response body is larger than ${String(opts.maxBodyBytes)} bytes` };
-    return observe402({ status: 402, headers: {}, body: new TextDecoder().decode(bytes) });
+    return observe402({ status: 402, headers, body: new TextDecoder().decode(bytes), url: url2 });
   } catch (err) {
     if (isTimeout(err)) return { kind: "timeout" };
     return { kind: "unreadable", reason: "response could not be read" };

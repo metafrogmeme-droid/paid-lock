@@ -1,4 +1,5 @@
 // Written with AI help, test fixture.
+import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Route, Scenario } from "./scenario.ts";
@@ -48,9 +49,49 @@ function substituteOrigin(value: unknown, origin: string): unknown {
   return value;
 }
 
-function sendJson(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
+function sendJson(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+  multi?: [name: string, values: string[]],
+): void {
+  if (multi !== undefined) res.setHeader(multi[0], multi[1]);
   res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store", ...headers });
   res.end(JSON.stringify(body));
+}
+
+/**
+ * Sorted-key JSON. For the fixture's request objects (strings, integers, booleans, nested objects) this is
+ * the JCS (RFC 8785) form MPP requires. Written here on purpose instead of using the core's canonicaliser,
+ * so a bug there cannot hide behind the fixture.
+ */
+function sortedJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(sortedJson).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${sortedJson(v)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+type MppChallenge = Extract<Route["respond"], { kind: "mpp" }>["challenges"][number];
+
+/** One `Payment` challenge; id, expires and opaque are new on every response (they are per challenge). */
+function mppChallenge(c: MppChallenge, origin: string): string {
+  const params: Record<string, string> = {
+    id: randomBytes(16).toString("base64url"),
+    realm: c.realm,
+    method: c.method,
+    intent: c.intent,
+    expires: new Date(Date.now() + 5 * 60_000).toISOString().replace(/\.\d{3}Z$/u, "Z"),
+    opaque: Buffer.from(sortedJson({ n: randomBytes(8).toString("hex") }), "utf8").toString("base64url"),
+    request: Buffer.from(sortedJson(substituteOrigin(c.request, origin)), "utf8").toString("base64url"),
+    ...(c.params ?? {}),
+  };
+  return `Payment ${Object.entries(params)
+    .map(([k, v]) => `${k}="${v.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`)
+    .join(", ")}`;
 }
 
 function respond(res: ServerResponse, route: Route, origin: string): void {
@@ -65,6 +106,12 @@ function respond(res: ServerResponse, route: Route, origin: string): void {
     }
     case "x402-v1":
       sendJson(res, 402, substituteOrigin(r.body, origin));
+      return;
+    case "mpp":
+      sendJson(res, 402, substituteOrigin(r.body ?? {}, origin), {}, [
+        "WWW-Authenticate",
+        r.challenges.map((c) => mppChallenge(c, origin)),
+      ]);
       return;
     case "raw": {
       const headers = substituteOrigin(r.headers ?? {}, origin) as Record<string, string>;

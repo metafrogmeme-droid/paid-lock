@@ -158,14 +158,18 @@ async function probeOnce(target: URL, opts: SampleOptions): Promise<Observation>
       return { kind: "not402", status };
     }
     const header = res.headers["payment-required"];
+    // MPP challenges (D-027). Node joins repeated WWW-Authenticate lines with ", "; the parser reads that list.
+    const auth = res.headers["www-authenticate"];
+    const headers = { ...(typeof auth === "string" ? { "www-authenticate": auth } : {}) };
+    const url = target.href;
     if (typeof header === "string") {
       res.destroy();
-      return observe402({ status: 402, headers: { "payment-required": header }, body: "" });
+      return observe402({ status: 402, headers: { ...headers, "payment-required": header }, body: "", url });
     }
     const bytes = await readCapped(res, opts.maxBodyBytes);
     if (bytes === null)
       return { kind: "unreadable", reason: `response body is larger than ${String(opts.maxBodyBytes)} bytes` };
-    return observe402({ status: 402, headers: {}, body: new TextDecoder().decode(bytes) });
+    return observe402({ status: 402, headers, body: new TextDecoder().decode(bytes), url });
   } catch (err) {
     if (isTimeout(err)) return { kind: "timeout" };
     return { kind: "unreadable", reason: "response could not be read" };
