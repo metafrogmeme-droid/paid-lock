@@ -30,4 +30,7 @@ First release: a lockfile for the paid endpoints an AI agent calls.
 
 - Never pays, signs or loads a key: dependency allowlist, a source scan for payment headers and signing calls, and a
   mock seller that counts payment headers in every end-to-end test (always 0).
+- The x402 client hooks are tested inside the official x402 TypeScript client (`@x402/core` 2.29.0, test only), with a
+  scheme that never signs: changed terms, a copied 402 on another URL, a policy that rewrites `payTo` and wrong wiring
+  all stop before payment creation.
 - Audit before release (docs/AUDIT.md): self-review and an independent second review; every finding fixed or answered.

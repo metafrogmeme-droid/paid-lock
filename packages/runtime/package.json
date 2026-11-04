@@ -35,6 +35,7 @@
   "devDependencies": {
     "@paid-lock/mock-seller": "workspace:*",
     "@paid-lock/probe": "workspace:*",
+    "@x402/core": "2.29.0",
     "paid-lock": "workspace:*"
   },
   "publishConfig": {
