@@ -149,11 +149,15 @@ transform requirements) against the lock at that moment, then aborts with the wo
 yes. Checking again at pay time also catches changes made to the 402 object between the two hooks. A 402 the first
 hook never saw throws, so a wiring mistake stops the payment instead of skipping the check. The adapter uses
 structural types only: the dependency allowlist keeps `@x402/*` packages other than `@x402/core` out of shipped code,
-and the runtime needs none. An integration test that runs the real client (with a stub scheme that never signs)
-against the mock seller is planned as a dev-only test with `@x402/core` **2.29.0**, the version of `e208bd3`. That
-version is younger than the repo's 7-day minimum release age until 4 Nov 2026 18:29 UTC; 2.28.0 has the same hook API
-but depends on zod 3.25.76 (GHSA-mrhx-c7xc-m3w5, high, fixed only in zod >= 4.6.6), which would fail the audit. Rather
-than loosening either control, the test lands once 2.29.0 is old enough.
+and the runtime needs none. The integration test `packages/runtime/src/adapters/x402-sdk.test.ts` runs the real
+client, `@x402/core` **2.29.0** (the version of `e208bd3`, a dev dependency of `@paid-lock/runtime` only, exact pin),
+with a stub scheme that never signs, against the loopback mock seller. It waited for 2.29.0 to pass the repo's 7-day
+minimum release age (4 Nov 2026 18:29 UTC) instead of using 2.28.0, whose zod 3.25.76 fails the audit
+(GHSA-mrhx-c7xc-m3w5); 2.29.0 depends only on zod `^4.6.6`, resolved to the workspace's zod 4.6.7, and `pnpm audit`
+reports nothing new. It covers: the demo's changes (allowed ones reach the scheme, changed payTo, network, price and
+`extra` abort with the verdict line), a control run without the hooks, hooks wired to another HTTP client (T24), an
+unpinned URL serving a copy of a pinned 402 (T23), a client policy that rewrites `payTo` (T25) and a garbage header;
+the mock seller asserts 0 payment headers.
 
 **D-025 Guard-reach lint.** `pnpm check:guard-reach` (CI, `check` job) parses every adapter in
 `packages/runtime/src/adapters/` with the TypeScript compiler API and fails unless every pay-path hook (names in
