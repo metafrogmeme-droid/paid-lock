@@ -1,7 +1,7 @@
 {
   "name": "@paid-lock/protocols",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "description": "Read-only parsers for x402 v2, x402 v1 and MPP payment challenges.",
   "license": "MIT",
   "repository": {

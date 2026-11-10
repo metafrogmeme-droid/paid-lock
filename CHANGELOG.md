@@ -3,7 +3,7 @@
 All notable changes. Versions follow semantic versioning. The release PR renames a heading such as
 `## 0.1.0 (unreleased)` to `## 0.1.0`; the release check only accepts the plain form (docs/RELEASE.md).
 
-## 0.1.0 (unreleased)
+## 0.1.0
 
 First release: a lockfile for the paid endpoints an AI agent calls.
 

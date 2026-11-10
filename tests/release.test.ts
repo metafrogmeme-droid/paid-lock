@@ -49,10 +49,12 @@ describe("release check (nothing is published unless every gate passes)", () => 
     );
   });
 
-  it("refuses this repository today: every package is still private (nothing to publish yet)", () => {
-    const r = runScript("scripts/release-check.ts", ["0.1.0", "publish 0.1.0"]);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("is private");
+  it("accepts this repository at 0.1.0 (the release PR) and refuses any other version", () => {
+    const ok = runScript("scripts/release-check.ts", ["0.1.0", "publish 0.1.0"]);
+    expect([ok.status, ok.stderr]).toEqual([0, ""]);
+    const other = runScript("scripts/release-check.ts", ["0.1.1", "publish 0.1.1"]);
+    expect(other.status).toBe(1);
+    expect(other.stderr).toContain("0.1.1");
   });
 
   it("needs both arguments", () => {

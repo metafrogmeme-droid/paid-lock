@@ -1,7 +1,7 @@
 {
   "name": "paid-lock",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "description": "paid-lock CLI: pin the paid endpoints your agent calls in a reviewed lockfile.",
   "license": "MIT",
   "repository": {

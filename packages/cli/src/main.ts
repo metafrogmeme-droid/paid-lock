@@ -29,7 +29,7 @@ export interface Io {
   prompt: (question: string) => Promise<string>;
 }
 
-export const VERSION = "0.0.0";
+export const VERSION = "0.1.0";
 
 const HELP = `Usage: paid-lock <command> [options]
 
