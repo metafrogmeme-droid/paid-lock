@@ -1,7 +1,7 @@
 {
   "name": "@paid-lock/core",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "description": "Pure core of paid.lock: lock format, canonical hashing, diff and verdicts. No I/O.",
   "license": "MIT",
   "repository": {

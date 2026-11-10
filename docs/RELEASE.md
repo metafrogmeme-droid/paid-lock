@@ -2,7 +2,8 @@
 
 Nothing is published until the owner says go in his own words (CLAUDE.md §5 rule 9). Claude prepares the
 workflow, this runbook and the release PR; it never publishes, tags, makes the repository public or changes
-repository settings. Status: **nothing published; the repository is private; every package is `"private": true`.**
+repository settings. Status: **nothing published; the repository is private.** The release PR for 0.1.0 sets the five
+published packages to `0.1.0` and `"private": false`; merging it publishes nothing (only the manual workflow below does).
 
 ## What a release publishes
 
@@ -19,7 +20,8 @@ repository settings. Status: **nothing published; the repository is private; eve
 2. **Owner approval.** The job runs in the `npm` environment, which has the owner as required reviewer.
 3. **Release check** (`scripts/release-check.ts`, also runnable locally): version is `X.Y.Z`, the confirmation matches,
    every published package has that version, is not private and is MIT, the CLI's `VERSION` matches, and
-   `CHANGELOG.md` has a `## X.Y.Z` section. Today it refuses: every package is private.
+   `CHANGELOG.md` has a `## X.Y.Z` section. With the 0.1.0 release PR merged it accepts `0.1.0` and refuses any other
+   version.
 4. **Full check and demo** run again inside the release job before anything is packed.
 5. **No stored token.** npm trusted publishing (OIDC, `id-token: write`) authenticates the job, and npm records
    provenance linking each package to this repository, workflow and commit.

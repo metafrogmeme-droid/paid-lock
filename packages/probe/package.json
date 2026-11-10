@@ -1,7 +1,7 @@
 {
   "name": "@paid-lock/probe",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "description": "Unpaid HTTP probe for paid endpoints. Never sends a payment header and never loads a key.",
   "license": "MIT",
   "repository": {
