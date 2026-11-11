@@ -2,7 +2,7 @@
 # starts it (Actions > release > Run workflow) and must type "publish <version>". Gates, in order:
 #   1. the `npm` environment, where the owner is the required reviewer (configured in repository settings);
 #   2. scripts/release-check.ts: version format, the typed confirmation, every published package at that
-#      version, not private, MIT, the CLI VERSION constant and a CHANGELOG section (refuses today: all private);
+#      version, not private, MIT, the CLI VERSION constant and a CHANGELOG section;
 #   3. the full `pnpm check` and the demo.
 # Publishing uses npm trusted publishing (OIDC, `id-token: write`): no npm token is stored anywhere, and npm
 # adds provenance. Actions pinned by full commit SHA, the same pins as ci.yml.

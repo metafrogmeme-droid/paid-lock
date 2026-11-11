@@ -34,16 +34,60 @@ published packages to `0.1.0` and `"private": false`; merging it publishes nothi
    repositories. Do this last, after the release PR is merged.
 3. **GitHub environment `npm`** (Settings → Environments): required reviewer = owner; deployment branches = `main` only.
 4. **Trusted publisher on npm** for each of the five packages: GitHub Actions, owner `metafrogmeme-droid`,
-   repository `paid-lock`, workflow `release.yml`, environment `npm`. If npm requires a package to exist before a
-   trusted publisher can be added, the first publish needs a different route; that is a separate owner decision
-   (check npm's documentation at the time; do not add a long-lived token to the repository).
+   repository `paid-lock`, workflow `release.yml`, environment `npm`. A package must exist on npm first, so 0.1.0 goes
+   out once by hand: see "First publish (one time)" below. Never add an npm token to the repository or CI.
+
+## First publish (one time)
+
+Release run 42943216299 (0.1.0) stopped at `npm publish` with `E404` on `@paid-lock/core`. The reason: npm
+trusted publishing cannot create a package that does not exist yet. Nothing was published. So the owner publishes
+0.1.0 once from his own computer with `scripts/first-publish.sh`, and from 0.1.1 on the release workflow publishes
+(DECISIONS D-031). The script uses only the owner's own `npm login` session: no npm token is created for this, and
+none goes into the repository, its settings or CI.
+
+1. **npm account and organisation.** Your npm account has two-factor authentication on (npmjs.com → Account →
+   Two-Factor Authentication, "Authorization and writes"). The npm organisation `paid-lock` exists and your account is
+   an owner of it.
+2. **A clean checkout of `main`**, up to date, with Node ≥ 22.18 and pnpm (`corepack enable`):
+   `git switch main && git pull && pnpm install --frozen-lockfile`.
+3. **Log in to npm:** `npm login` (it opens the browser and asks for your second factor), then `npm whoami`.
+4. **Dry run:** `bash scripts/first-publish.sh`. It stops at the first failed check, in this order: the registry is
+   `https://registry.npmjs.org/`; the working tree is clean, on `main` and equal to `origin/main`; the release check
+   (`scripts/release-check.ts`, as in the workflow); `npm whoami` and membership of the `paid-lock` organisation;
+   none of the five packages is already on the registry at this version; `pnpm install --frozen-lockfile`,
+   `pnpm check` and `pnpm demo`; then it packs each package with `pnpm pack` and runs
+   `npm publish <tarball> --access public --dry-run` in dependency order. Read the file lists it prints. It ends with
+   `dry run OK: 5 packages at 0.1.0 would be published`.
+5. **Publish:** `bash scripts/first-publish.sh --publish`. The same checks run again; then type `publish 0.1.0` when
+   asked. It publishes `@paid-lock/core`, `@paid-lock/protocols`, `@paid-lock/probe`, `@paid-lock/runtime` and
+   `paid-lock` in that order with `--access public`; npm asks for your second factor as needed. It stops at the first
+   error.
+6. **Check:** `npm view <name>@0.1.0 version` prints `0.1.0` for each of the five. 0.1.0 has no provenance (npm only
+   issues it from CI); 0.1.1 onwards will.
+7. **Add a trusted publisher to each package** on npmjs.com (package → Settings → Trusted publishing), for each of
+   `@paid-lock/core`, `@paid-lock/protocols`, `@paid-lock/probe`, `@paid-lock/runtime` and `paid-lock`:
+   - Publisher: **GitHub Actions**
+   - Organization or user: **metafrogmeme-droid**
+   - Repository: **paid-lock**
+   - Workflow filename: **release.yml**
+   - Environment name: **npm**
+8. **Then:** the GitHub release `v0.1.0` for the Marketplace (Release steps, step 4). From 0.1.1, use the Release
+   steps below; the workflow publishes through the trusted publishers.
+
+**If the publish stops part-way**, the packages already published stay published (npm does not take the same
+version twice). Do not run the script again: it stops at "already on the registry". Publish the remaining packages by
+hand, in the same order, from the same clean `main`, one at a time (replace `probe` with each remaining directory):
+`d=$(mktemp -d) && (cd packages/probe && pnpm pack --pack-destination "$d") && npm publish "$d"/*.tgz --access public`.
+Use `pnpm pack`, never a plain `npm publish` in the package folder: only `pnpm pack` turns `workspace:*` into `0.1.0`.
+
+Credit: HUMANOID-TRADERS · RUNECLAW, Patrick Baur, CEO.
 
 ## Release steps
 
 1. **Release PR** (Claude prepares, owner merges): versions `0.0.0 → X.Y.Z` in the five `package.json` files and in
    `packages/cli/src/main.ts` (`VERSION`), `"private": false` on those five, and a `## X.Y.Z` section in
    `CHANGELOG.md` (rename `## X.Y.Z (unreleased)` to `## X.Y.Z`). CI must be green; `node scripts/release-check.ts X.Y.Z "publish X.Y.Z"` must print OK.
-2. **Publish** (owner): Actions → release → Run workflow on `main`, enter `X.Y.Z` and `publish X.Y.Z`, approve the
+2. **Publish** (owner; 0.1.0 is the one-time first publish above): Actions → release → Run workflow on `main`, enter `X.Y.Z` and `publish X.Y.Z`, approve the
    `npm` environment when asked.
 3. **Check** (anyone): `npm view paid-lock@X.Y.Z` and `npm audit signatures` in a project that installs it show the
    version and its provenance.
