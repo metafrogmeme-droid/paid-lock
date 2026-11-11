@@ -2,8 +2,29 @@
 
 Nothing is published until the owner says go in his own words (CLAUDE.md §5 rule 9). Claude prepares the
 workflow, this runbook and the release PR; it never publishes, tags, makes the repository public or changes
-repository settings. Status: **nothing published; the repository is private.** The release PR for 0.1.0 sets the five
-published packages to `0.1.0` and `"private": false`; merging it publishes nothing (only the manual workflow below does).
+repository settings.
+
+## Status (11 Nov 2026)
+
+**0.1.0 is published**, by the owner's one-time first publish from his own computer (see "First publish (one time)").
+
+| Item                                                                                                                     | State                                                                                                                                                                                                                                                                           | How it was checked                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| npm `paid-lock`, `@paid-lock/core`, `@paid-lock/protocols`, `@paid-lock/probe`, `@paid-lock/runtime`                     | `latest` = `0.1.0`, MIT, published 11 Nov 2026 between 11:20 and 11:22 UTC (`@paid-lock/core` last, at 11:22) by the owner from `main` at `5a87659` (owner's report; npm records no commit for these tarballs); dependencies on each other pinned to `0.1.0` (no `workspace:*`) | `npm view` (public registry)                                                                                |
+| Placeholder version `0.0.0-stage` on each of the five                                                                    | also listed (published 11:18 to 11:19 UTC, before 0.1.0); not `latest`                                                                                                                                                                                                          | `npm view <name> versions`                                                                                  |
+| Provenance for 0.1.0                                                                                                     | none, as expected for a publish from a laptop                                                                                                                                                                                                                                   | `npm view <name>@0.1.0 dist.attestations` is empty                                                          |
+| GitHub release `v0.1.0`                                                                                                  | published, marked Latest, tag `v0.1.0` = `5a87659`                                                                                                                                                                                                                              | GitHub API, `git ls-remote --tags`                                                                          |
+| Trusted publisher on each of the five (GitHub Actions, `metafrogmeme-droid/paid-lock`, `release.yml`, environment `npm`) | added by the owner (owner's report)                                                                                                                                                                                                                                             | **not independently checked**: npm shows a package's trusted publishers only to its maintainers, behind 2FA |
+| GitHub environment `npm` with the owner as required reviewer                                                             | not reported yet                                                                                                                                                                                                                                                                | needs repository settings access; check before 0.1.1 (One-time setup, step 3)                               |
+| Repository visibility                                                                                                    | private: an unauthenticated request to the repository page returns 404                                                                                                                                                                                                          | `curl` without credentials, 11 Nov 2026                                                                     |
+| Marketplace listing of the Action                                                                                        | not yet (needs a public repository)                                                                                                                                                                                                                                             | follows from the row above                                                                                  |
+
+**The first release through the workflow (0.1.1 or later) is what verifies the trusted publishers.** If one of them is
+wrong (owner, repository, workflow file name or environment), the `Publish` step fails for that package with an
+authentication error and nothing more is published; fix the trusted publisher on npmjs.com and run the workflow again
+(see "If something goes wrong"). The workflow publishes with `--provenance`, and npm only issues provenance for a public
+source repository, so **make the repository public before that release** (One-time setup, step 2). A successful run
+also shows provenance on npm for that version (`npm audit signatures` in a project that installs it).
 
 ## What a release publishes
 
@@ -28,16 +49,20 @@ published packages to `0.1.0` and `"private": false`; merging it publishes nothi
 
 ## One-time setup (owner)
 
-1. **npm names.** Create the npm organisation `paid-lock` (owns the `@paid-lock` scope) and check that the unscoped
+1. **npm names** (done 11 Nov 2026: the five names are published). Create the npm organisation `paid-lock` (owns the `@paid-lock` scope) and check that the unscoped
    name `paid-lock` is still free (both were on 31 Oct 2026; OPEN_QUESTIONS #1).
-2. **Make the repository public.** The Marketplace requires it, and npm provenance is only issued for public
+2. **Make the repository public** (open: still private on 11 Nov 2026; needed before the 0.1.1 release). The Marketplace requires it, and npm provenance is only issued for public
    repositories. Do this last, after the release PR is merged.
-3. **GitHub environment `npm`** (Settings → Environments): required reviewer = owner; deployment branches = `main` only.
-4. **Trusted publisher on npm** for each of the five packages: GitHub Actions, owner `metafrogmeme-droid`,
+3. **GitHub environment `npm`** (not reported yet; check before 0.1.1) (Settings → Environments): required reviewer = owner; deployment branches = `main` only.
+   If it does not exist, GitHub creates it on the first run **without** a required reviewer, so that run would not wait for your approval.
+4. **Trusted publisher on npm** (done 11 Nov 2026 by the owner; verified by the first workflow release) for each of the five packages: GitHub Actions, owner `metafrogmeme-droid`,
    repository `paid-lock`, workflow `release.yml`, environment `npm`. A package must exist on npm first, so 0.1.0 goes
    out once by hand: see "First publish (one time)" below. Never add an npm token to the repository or CI.
 
 ## First publish (one time)
+
+**Done on 11 Nov 2026** (owner, from `main` at `5a87659`): steps 1 to 7 below; step 8's GitHub release `v0.1.0` is
+published, its Marketplace listing waits for the repository to be public. Kept as the record of how 0.1.0 was published.
 
 Release run 42943216299 (0.1.0) stopped at `npm publish` with `E404` on `@paid-lock/core`. The reason: npm
 trusted publishing cannot create a package that does not exist yet. Nothing was published. So the owner publishes
