@@ -94,5 +94,32 @@ jobs:
       - name: Publish in dependency order (OIDC, provenance, public)
         run: |
           for n in 1 2 3 4 5; do
-            npm publish ".release/$n"/*.tgz --provenance --access public
+            mapfile -t tgzs < <(find ".release/$n" -maxdepth 1 -name "*.tgz")
+            if [ "${#tgzs[@]}" -ne 1 ]; then
+              echo "expected exactly one tarball in .release/$n, found ${#tgzs[@]}" >&2
+              exit 1
+            fi
+            tgz=${tgzs[0]}
+            read -r name version < <(tar -xOf "$tgz" package/package.json | node -e '
+              const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
+              if (!p.name || !p.version) process.exit(1);
+              process.stdout.write(p.name + " " + p.version + "\n");
+            ')
+            [ -n "$name" ] && [ -n "$version" ]
+            view_err=".release/$n/npm-view.err"
+            if out=$(npm view "$name@$version" version 2>"$view_err"); then
+              out=$(printf '%s' "$out" | tr -d '[:space:]')
+              if [ "$out" != "$version" ]; then
+                echo "npm view $name@$version version returned unexpected output: $out" >&2
+                exit 1
+              fi
+              echo "already published, skipping $name@$version"
+              continue
+            fi
+            if ! grep -qE "E404|404 Not Found" "$view_err"; then
+              echo "could not check $name@$version on the registry:" >&2
+              cat "$view_err" >&2
+              exit 1
+            fi
+            npm publish "$tgz" --provenance --access public
           done
