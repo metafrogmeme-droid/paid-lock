@@ -1,13 +1,13 @@
 // Usage: node scripts/check-deps.ts   Exit 0 clean, 1 problems, 2 tool error.
 // Reads the installed production dependency trees from `pnpm ls` and applies scripts/lib/deps.ts.
-import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { checkPackage, GUARDED, type DepNode } from "./lib/deps.ts";
+import { runPnpm } from "./lib/pnpm.ts";
 
 const root = resolve(import.meta.dirname, "..");
-const raw = execFileSync("pnpm", ["ls", "-r", "--prod", "--json", "--depth", "Infinity"], {
+// Through runPnpm so it also runs on Windows, where pnpm is a .cmd shim (scripts/lib/pnpm.ts).
+const raw = runPnpm(["ls", "-r", "--prod", "--json", "--depth", "Infinity"], {
   cwd: root,
-  encoding: "utf8",
   maxBuffer: 64 * 1024 * 1024,
 });
 const trees = JSON.parse(raw) as DepNode[];
