@@ -18,8 +18,6 @@ const { values, positionals } = parseArgs({
 });
 const scenarioPath = positionals[0] ?? fileURLToPath(new URL("../scenarios/baseline.json", import.meta.url));
 const seller = await startMockSeller({ scenario: await loadScenario(scenarioPath), port: Number(values.port) });
-process.stdout.write(`mock-seller listening ${seller.origin}\n`);
-
 let stopping = false;
 const stop = async (): Promise<void> => {
   if (stopping) return;
@@ -35,3 +33,6 @@ if (values["stop-on-stdin-end"]) {
   process.stdin.once("end", () => void stop());
   process.stdin.resume();
 }
+// Announce only once every stop handler is in place: a caller that stops the seller right after this line
+// (signal or stdin) must reach the handler, not the default action.
+process.stdout.write(`mock-seller listening ${seller.origin}\n`);
