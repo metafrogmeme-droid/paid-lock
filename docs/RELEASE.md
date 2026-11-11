@@ -21,10 +21,11 @@ repository settings.
 
 **The first release through the workflow (0.1.1 or later) is what verifies the trusted publishers.** If one of them is
 wrong (owner, repository, workflow file name or environment), the `Publish` step fails for that package with an
-authentication error and nothing more is published; fix the trusted publisher on npmjs.com and run the workflow again
-(see "If something goes wrong"). The workflow publishes with `--provenance`, and npm only issues provenance for a public
-source repository, so the repository had to be public before that release (One-time setup, step 2; done). A successful run
-also shows provenance on npm for that version (`npm audit signatures` in a project that installs it).
+authentication error; packages already published in that run stay on the registry. Fix the trusted publisher on
+npmjs.com and run the workflow again with the same version (see "If something goes wrong"). The workflow publishes
+with `--provenance`, and npm only issues provenance for a public source repository, so the repository had to be
+public before that release (One-time setup, step 2; done). A successful run also shows provenance on npm for that
+version (`npm audit signatures` in a project that installs it).
 
 ## What a release publishes
 
@@ -132,5 +133,7 @@ Credit: HUMANOID-TRADERS · RUNECLAW, Patrick Baur, CEO.
 - A bad npm version: `npm deprecate <pkg>@X.Y.Z "<reason>"` and publish a fixed `X.Y.Z+1`; npm only allows
   unpublishing a recent version under its own policy.
 - A failed workflow before `Publish`: nothing reached npm; fix and run it again.
-- A partial publish (some packages out): rerun with the same version fails for the ones already out; publish the
-  rest by running the workflow again after a release PR that bumps only what is missing, or deprecate and bump all.
+- A partial publish (some packages already out at this version): fix the cause, then run the same version again.
+  Already-published packages are skipped (`already published, skipping`); only a clean E404 / "not found" from
+  `npm view <name>@<version> version` is treated as unpublished, and any other registry error fails the step. Do
+  not bump the version to recover.
