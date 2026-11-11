@@ -50,6 +50,10 @@ none goes into the repository, its settings or CI.
    an owner of it.
 2. **A clean checkout of `main`**, up to date, with Node ≥ 22.18 and pnpm (`corepack enable`):
    `git switch main && git pull && pnpm install --frozen-lockfile`.
+   On Windows, run every step from Git Bash, in a checkout made with `core.autocrlf=false` (for example
+   `git -c core.autocrlf=false clone …`, or `git config core.autocrlf false` before checking out): the script and
+   the format check expect LF line endings. The script's tests spawn bash and are slower there; each has a 60 s
+   timeout.
 3. **Log in to npm:** `npm login` (it opens the browser and asks for your second factor), then `npm whoami`.
 4. **Dry run:** `bash scripts/first-publish.sh`. It stops at the first failed check, in this order: the registry is
    `https://registry.npmjs.org/`; the working tree is clean, on `main` and equal to `origin/main`; the release check

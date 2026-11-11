@@ -73,7 +73,12 @@ function run(args: string[], env: Record<string, string> = {}, input = "") {
   return { status: r.status, stdout: r.stdout, stderr: r.stderr, calls, publishes };
 }
 
-describe("scripts/first-publish.sh (one-time first publish, owner's machine)", () => {
+// Each test spawns bash (some several times), which can take seconds on Windows (Git Bash). An explicit timeout
+// for every test here, instead of vitest's 5 s default, keeps the owner's local run green there; the assertions
+// are unchanged.
+const SPAWN_TIMEOUT_MS = 60_000;
+
+describe("scripts/first-publish.sh (one-time first publish, owner's machine)", { timeout: SPAWN_TIMEOUT_MS }, () => {
   it("is a dry run by default: every check, then npm publish --dry-run in dependency order", () => {
     const r = run([]);
     expect(r.status).toBe(0);
