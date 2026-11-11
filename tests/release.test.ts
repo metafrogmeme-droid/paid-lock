@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkRelease, PUBLISHED, type ReleaseInput } from "../scripts/lib/release.ts";
 import { runScript } from "./run.ts";
@@ -49,12 +51,15 @@ describe("release check (nothing is published unless every gate passes)", () => 
     );
   });
 
-  it("accepts this repository at 0.1.0 (the release PR) and refuses any other version", () => {
-    const ok = runScript("scripts/release-check.ts", ["0.1.0", "publish 0.1.0"]);
+  it("accepts this repository at its own version and refuses any other version", () => {
+    const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, "../packages/core/package.json"), "utf8")) as {
+      version: string;
+    };
+    const ok = runScript("scripts/release-check.ts", [pkg.version, `publish ${pkg.version}`]);
     expect([ok.status, ok.stderr]).toEqual([0, ""]);
-    const other = runScript("scripts/release-check.ts", ["0.1.1", "publish 0.1.1"]);
+    const other = runScript("scripts/release-check.ts", ["9.9.9", "publish 9.9.9"]);
     expect(other.status).toBe(1);
-    expect(other.stderr).toContain("0.1.1");
+    expect(other.stderr).toContain("9.9.9");
   });
 
   it("needs both arguments", () => {

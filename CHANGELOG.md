@@ -3,6 +3,33 @@
 All notable changes. Versions follow semantic versioning. The release PR renames a heading such as
 `## 0.1.0 (unreleased)` to `## 0.1.0`; the release check only accepts the plain form (docs/RELEASE.md).
 
+## 0.1.1
+
+Same package code as 0.1.0. This is the first release published by the release workflow (`release.yml`): npm
+trusted publishing (OIDC, no npm token) with npm provenance for each package. 0.1.0 was published once by hand and
+has no provenance (docs/RELEASE.md, "First publish (one time)").
+
+### Repository and release tooling (not part of the npm packages)
+
+Already in the `v0.1.0` tag (`5a87659`) but missing from the 0.1.0 notes:
+
+- One-time first publish: `scripts/first-publish.sh` (dry run by default; `--publish` with a typed confirmation;
+  runs the release gates first and stops at the first error) and its runbook (#31, DECISIONS D-031).
+- Windows (Git Bash) fixes found during the owner's first-publish dry run:
+  - the first-publish script's tests have an explicit 60 s timeout, because starting bash is slow on Windows;
+    RELEASE.md notes running from Git Bash with `core.autocrlf=false` (#32);
+  - `check-deps` starts pnpm through `scripts/lib/pnpm.ts`, which works with the Windows `pnpm.cmd` shim (pnpm's
+    own entry under `pnpm run`, no shell; otherwise `pnpm.cmd` with plain arguments only); the dependency check is
+    unchanged (#33);
+  - the smoke test stops the mock seller by closing its stdin (`--stop-on-stdin-end`) instead of SIGTERM, which on
+    Windows ends a process without running its handler; it also checks that the seller saw 0 payment headers. The
+    mock seller now prints "listening" only after its stop handlers are set (a race seen in CI), and the demo gives
+    the CLI `SystemRoot` on Windows, which Windows networking needs (#34).
+
+Since `v0.1.0`:
+
+- docs/RELEASE.md records the 0.1.0 publish and what had to be done before 0.1.1 (#35).
+
 ## 0.1.0
 
 First release: a lockfile for the paid endpoints an AI agent calls.
