@@ -14,6 +14,7 @@ import {
   type DemoEndpoint,
 } from "../fixtures/mock-seller/src/demo-scenarios.ts";
 import { startMockSeller } from "../fixtures/mock-seller/src/index.ts";
+import { minimalChildEnv } from "./lib/child-env.ts";
 import { scanText } from "./lib/never-pays.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -35,7 +36,8 @@ function cli(args: string[]): Promise<{ status: number | null; stdout: string }>
     execFile(
       process.execPath,
       [bin, ...args],
-      { cwd: dir, encoding: "utf8", env: { PATH: process.env["PATH"] ?? "" } },
+      // Only PATH (and SystemRoot on Windows, which networking needs): no keys or config (scripts/lib/child-env.ts).
+      { cwd: dir, encoding: "utf8", env: minimalChildEnv(process.env, process.platform) },
       (err, stdout) => {
         done({ status: err === null ? 0 : typeof err.code === "number" ? err.code : null, stdout });
       },

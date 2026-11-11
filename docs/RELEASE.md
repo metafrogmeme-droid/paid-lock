@@ -53,7 +53,9 @@ none goes into the repository, its settings or CI.
    On Windows, run every step from Git Bash, in a checkout made with `core.autocrlf=false` (for example
    `git -c core.autocrlf=false clone …`, or `git config core.autocrlf false` before checking out): the script and
    the format check expect LF line endings. The script's tests spawn bash and are slower there; each has a 60 s
-   timeout.
+   timeout. The smoke test stops the mock seller by closing its stdin (a SIGTERM on Windows runs no
+   handler), and the demo passes `SystemRoot` to the CLI (Windows networking needs it). If npm cannot ask for your
+   one-time code in Git Bash's own window, run Git Bash inside Windows Terminal instead.
 3. **Log in to npm:** `npm login` (it opens the browser and asks for your second factor), then `npm whoami`.
 4. **Dry run:** `bash scripts/first-publish.sh`. It stops at the first failed check, in this order: the registry is
    `https://registry.npmjs.org/`; the working tree is clean, on `main` and equal to `origin/main`; the release check
