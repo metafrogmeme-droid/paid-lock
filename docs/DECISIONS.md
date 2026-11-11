@@ -223,3 +223,15 @@ the queue does not parse the verdict line. For `PRICE_ABOVE_LOCK`, `locked` is t
 the limit the price went over. Codes without one value to compare (`TERMS_CHANGED_OTHER`, `NEW_OPTION_OFFERED`,
 `OPTION_REMOVED`, `NOT_IN_LOCK`, unreadable, not 402, timeout) have no `change`. Additive: no verdict, code or line
 changes.
+
+**D-031 First publish by hand, once; trusted publishing from 0.1.1 (owner decision of 11 Nov 2026).** Release run
+42943216299 stopped at `npm publish` with `E404` on `@paid-lock/core`: npm trusted publishing cannot create a
+package that does not exist, and nothing was published. The owner creates the npm organisation `paid-lock`, publishes
+0.1.0 once from his own computer with `scripts/first-publish.sh`, then adds a trusted publisher (GitHub Actions,
+`metafrogmeme-droid/paid-lock`, `release.yml`, environment `npm`) to each package; from 0.1.1 the release workflow
+publishes. The script is a dry run unless `--publish` is given and the owner types `publish <version>`; it runs the
+workflow's gates (release check, full check, demo), requires a clean `main` equal to `origin/main`, the public
+registry, `npm whoami`, membership of the organisation and that no package is already at the version, publishes the
+same `pnpm pack` tarballs in the same order with `--access public`, and stops at the first error. It uses the owner's
+own `npm login` session with 2FA: no npm token is created, stored or read, in the repository or CI. 0.1.0 has no
+provenance (npm issues it only from CI). Tested with stub `npm`, `pnpm` and `git` (`tests/first-publish.test.ts`).
