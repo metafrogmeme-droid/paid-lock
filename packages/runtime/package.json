@@ -1,6 +1,6 @@
 {
   "name": "@paid-lock/runtime",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Check a 402 against paid.lock at pay time, so a client hook can refuse changed terms. Never pays.",
   "license": "MIT",

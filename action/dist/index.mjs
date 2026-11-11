@@ -21698,7 +21698,7 @@ async function runVerify(lock, opts) {
 }
 
 // packages/cli/src/main.ts
-var VERSION = "0.1.0";
+var VERSION = "0.1.1";
 
 // action/src/comment.ts
 import { readFileSync as readFileSync2 } from "node:fs";
