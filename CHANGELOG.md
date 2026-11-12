@@ -29,6 +29,13 @@ Already in the `v0.1.0` tag (`5a87659`) but missing from the 0.1.0 notes:
 Since `v0.1.0`:
 
 - docs/RELEASE.md records the 0.1.0 publish and what had to be done before 0.1.1 (#35).
+- Release workflow fixes needed to publish 0.1.1 (after the release PR, #36):
+  - the `.npmrc` that `actions/setup-node` writes for publishing (it names `${NODE_AUTH_TOKEN}`, unset under OIDC)
+    is now created only right before the publish step, so install, check and pack never read it; no token was added
+    (#37);
+  - a rerun after a partial publish skips packages already on the registry at that version instead of failing with
+    E403; only a clean "not found" counts as unpublished, any other registry error fails the step (#38). The four
+    libraries were published by the run on #37's merge, the CLI by the run on #38's merge (docs/RELEASE.md, Status).
 
 ## 0.1.0
 
