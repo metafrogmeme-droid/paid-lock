@@ -20,9 +20,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # Pin to the release's full commit SHA once 0.1.0 is published (nothing is published yet).
+      # Pinned to a full commit SHA (the 0.1.1 release commit); update it when you update paid-lock.
       - name: paid.lock
-        uses: metafrogmeme-droid/paid-lock@v0.1.0
+        uses: metafrogmeme-droid/paid-lock@f57b774ba49cc9b6a71dd1f14875e0887f00c042 # 0.1.1
         with:
           lockfile: paid.lock
           fail-on: needs-ok # default: fail on "Blocked by your rule" and on "Needs your OK"
