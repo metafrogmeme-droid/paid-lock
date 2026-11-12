@@ -5,18 +5,21 @@ pins, per endpoint, the `payTo`, network (CAIP-2), asset, scheme, maximum amount
 The `paid-lock` CLI reads each endpoint's 402 terms (x402 v2, x402 v1 or MPP) **without paying** and a GitHub Action fails CI when a seller
 changes where the money goes or raises the price above your lock.
 
-> **Status: MVP (CLI + GitHub Action) done; M5 (runtime library) in progress.** Nothing is published to npm or the
-> Marketplace yet; run it from this repo.
+> **Status: 0.1.1 is on npm** (`paid-lock`, `@paid-lock/core`, `@paid-lock/protocols`, `@paid-lock/probe`,
+> `@paid-lock/runtime`), published by the release workflow with npm provenance. The GitHub Action is not on the
+> Marketplace yet: reference it by commit SHA (below).
 
-## Quick start (from this repo)
+## Quick start
 
 ```sh
-pnpm install && pnpm build
-node packages/cli/dist/bin.js init
-node packages/cli/dist/bin.js add https://seller.example/v1/forecast   # probes unpaid, pins the terms
-git diff paid.lock                                                      # review what you pinned
-node packages/cli/dist/bin.js verify                                    # 0 allowed, 1 blocked, 2 needs your OK
+npx paid-lock@0.1.1 init
+npx paid-lock@0.1.1 add https://seller.example/v1/forecast   # probes unpaid, pins the terms
+git diff paid.lock                                            # review what you pinned
+npx paid-lock@0.1.1 verify                                    # 0 allowed, 1 blocked, 2 needs your OK
 ```
+
+Or install it in the project (`npm install --save-dev paid-lock@0.1.1`) and run `npx paid-lock …`. From a clone of
+this repository: `pnpm install && pnpm build`, then `node packages/cli/dist/bin.js …`.
 
 Commands, exit codes and reason codes: [docs/SPEC.md](docs/SPEC.md).
 
@@ -35,7 +38,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: metafrogmeme-droid/paid-lock@v0.1.0 # pin to the release commit SHA (not published yet)
+      - uses: metafrogmeme-droid/paid-lock@f57b774ba49cc9b6a71dd1f14875e0887f00c042 # 0.1.1
 ```
 
 | Input      | Default           | Meaning                                                                           |
@@ -52,10 +55,10 @@ addresses unless the lock entry opts in, and never follows redirects.
 
 paid-lock never pays, never signs and never loads a key.
 
-## Runtime check (M5, in progress)
+## Runtime check
 
-`@paid-lock/runtime` applies the same lock at pay time, so a client hook can refuse changed terms before it pays.
-It reads terms only; it never pays, signs or loads a key.
+`@paid-lock/runtime` (`npm install @paid-lock/runtime@0.1.1`) applies the same lock at pay time, so a client hook can
+refuse changed terms before it pays. It reads terms only; it never pays, signs or loads a key.
 
 With the official x402 client, two hooks do it (the payment is aborted with the verdict line):
 
