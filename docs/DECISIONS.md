@@ -235,3 +235,13 @@ registry, `npm whoami`, membership of the organisation and that no package is al
 same `pnpm pack` tarballs in the same order with `--access public`, and stops at the first error. It uses the owner's
 own `npm login` session with 2FA: no npm token is created, stored or read, in the repository or CI. 0.1.0 has no
 provenance (npm issues it only from CI). Tested with stub `npm`, `pnpm` and `git` (`tests/first-publish.test.ts`).
+
+**D-032 CodeQL as advanced setup, next to Semgrep (19 Nov 2026; plan approved by the owner on 3 Nov: "CodeQL after
+public").** The repository is public, so CodeQL is free; it now runs from `.github/workflows/codeql.yml` on every pull
+request, on pushes to `main` and weekly. Advanced setup (a workflow file) rather than the repository's default-setup
+switch, because the configuration, the pinned action SHA and the token permissions are then reviewed in pull requests
+like the rest of CI; default setup must stay off, or GitHub refuses this workflow's results. JavaScript/TypeScript with
+`build-mode: none` (nothing is built or run), the `security-extended` query suite, and `action/dist` ignored because it
+is generated from `action/src`, which is analysed. The job's token has `contents: read` and `security-events: write`
+(needed to upload results to code scanning), nothing else, and checkout does not keep it. Semgrep stays (D-008): its
+project rules check paid.lock-specific patterns that CodeQL does not.
