@@ -1,0 +1,59 @@
+# CodeQL static analysis of the JavaScript/TypeScript sources (AUDIT S3, DECISIONS D-032). It runs alongside
+# Semgrep (ci.yml), not instead of it: CodeQL is free now that the repository is public.
+#
+# Advanced setup (this reviewed file) instead of the repository's "default setup" switch: the configuration,
+# pins and permissions live in the repo and change only by pull request. Do not also turn on default setup:
+# GitHub then refuses the results of this workflow.
+#
+# Local only: it reads the checked-out sources (build-mode none, nothing is built or run) and uploads its
+# results to this repository's code scanning. No secret, no key, no other host.
+#
+# Pins: every action by full commit SHA (tag in the comment). github/codeql-action v4.39.3 is an annotated tag;
+# the pin is its commit (git ls-remote and a fetch of the tag, 19 Nov 2026; commit date 4 Nov 2026).
+
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1" # weekly, so new CodeQL queries also run on an unchanged main
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: codeql (javascript-typescript)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write # upload the results to this repository's code scanning; nothing else
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+          # The bundled Action (action/dist) is generated from action/src, which is analysed.
+          config: |
+            paths-ignore:
+              - action/dist
+              - "**/node_modules"
+
+      - name: Analyse
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:javascript-typescript

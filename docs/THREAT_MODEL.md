@@ -72,4 +72,4 @@ paid.lock itself holds **no keys and moves no money** (CLAUDE.md §5 rule 3).
 - **MPP chain ids are pinned only as "other terms".** A chain id inside `methodDetails` changes as
   `TERMS_CHANGED_OTHER` (Needs your OK) until `draft-evm-charge-00` is read; owners can tighten that code to Blocked.
   Only the `charge` intent is read.
-- **CodeQL** runs only once the repository is public (AUDIT S3); Semgrep runs on every pull request.
+- **CodeQL** (`security-extended`) and **Semgrep** both run on every pull request (AUDIT S3, DECISIONS D-032).
